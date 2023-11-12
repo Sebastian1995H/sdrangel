@@ -31,7 +31,7 @@
         "CMAKE_INSTALL_PREFIX": "/opt/install/sdrangel"
       },
       "warnings": {
-        "dev": false
+        "dev":false
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
