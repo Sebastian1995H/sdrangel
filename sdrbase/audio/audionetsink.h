@@ -1,6 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2018 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2016, 2018-2019 Edouard Griffiths, F4EXB <f4exb06@gmail.com> //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -87,7 +88,8 @@ protected:
     AudioCompressor m_audioCompressor;
     AudioG722 m_g722;
     AudioOpus m_opus;
-    AudioFilter m_audioFilter;
+    AudioFilter m_audioFilterR;
+    AudioFilter m_audioFilterL;
     int m_sampleRate;
     bool m_stereo;
     uint32_t m_decimation;

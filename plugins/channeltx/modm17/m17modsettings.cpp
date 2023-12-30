@@ -1,5 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2019, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2021, 2023 Jon Beniston, M7RCE <jon@beniston.com>               //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -35,7 +38,7 @@ void M17ModSettings::resetToDefaults()
 {
     m_inputFrequencyOffset = 0;
     m_rfBandwidth = 16000.0f;
-    m_fmDeviation = 10000.0f; //!< full deviation
+    m_fmDeviation = 2400.0; //!< peak deviation
     m_toneFrequency = 1000.0f;
     m_volumeFactor = 1.0f;
     m_channelMute = false;
@@ -146,7 +149,7 @@ bool M17ModSettings::deserialize(const QByteArray& data)
         d.readS32(1, &tmp, 0);
         m_inputFrequencyOffset = tmp;
         d.readReal(2, &m_rfBandwidth, 12500.0);
-        d.readReal(4, &m_fmDeviation, 10000.0);
+        d.readReal(4, &m_fmDeviation, 2400.0);
         d.readU32(5, &m_rgbColor);
         d.readReal(6, &m_toneFrequency, 1000.0);
         d.readReal(7, &m_volumeFactor, 1.0);

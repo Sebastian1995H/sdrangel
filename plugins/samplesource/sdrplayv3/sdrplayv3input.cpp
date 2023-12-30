@@ -1,6 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2016 Edouard Griffiths, F4EXB                                   //
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2021-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2021-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2021 Franco Venturi <fventuri@comcast.net>                      //
+// Copyright (C) 2022 Piotr Majkrzak <piotr@majkrzak.dev>                        //
+// Copyright (C) 2023 Daniele Forsi <iu5hkx@gmail.com>                           //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -39,6 +42,7 @@
 
 MESSAGE_CLASS_DEFINITION(SDRPlayV3Input::MsgConfigureSDRPlayV3, Message)
 MESSAGE_CLASS_DEFINITION(SDRPlayV3Input::MsgStartStop, Message)
+MESSAGE_CLASS_DEFINITION(SDRPlayV3Input::MsgSaveReplay, Message)
 
 SDRPlayV3Input::SDRPlayV3Input(DeviceAPI *deviceAPI) :
     m_deviceAPI(deviceAPI),
@@ -152,7 +156,7 @@ bool SDRPlayV3Input::start()
 
     if (m_running) stop();
 
-    m_sdrPlayThread = new SDRPlayV3Thread(m_dev, &m_sampleFifo);
+    m_sdrPlayThread = new SDRPlayV3Thread(m_dev, &m_sampleFifo, &m_replayBuffer);
     m_sdrPlayThread->setLog2Decimation(m_settings.m_log2Decim);
     m_sdrPlayThread->setFcPos((int) m_settings.m_fcPos);
     m_sdrPlayThread->startWork();
@@ -303,6 +307,12 @@ bool SDRPlayV3Input::handleMessage(const Message& message)
 
         return true;
     }
+    else if (MsgSaveReplay::match(message))
+    {
+        MsgSaveReplay& cmd = (MsgSaveReplay&) message;
+        m_replayBuffer.save(cmd.getFilename(), m_settings.m_devSampleRate, getCenterFrequency());
+        return true;
+    }
     else
     {
         return false;
@@ -405,7 +415,10 @@ bool SDRPlayV3Input::applySettings(const SDRPlayV3Settings& settings, const QLis
             else
                 qDebug() <<  "SDRPlayV3Input::applySettings: sample rate set to " << sampleRate;
             forwardChange = true;
-        }
+            if (settings.m_devSampleRate != m_settings.m_devSampleRate) {
+                m_replayBuffer.clear();
+            }
+         }
     }
 
     if (settingsKeys.contains("log2Decim") || force)
@@ -691,6 +704,18 @@ bool SDRPlayV3Input::applySettings(const SDRPlayV3Settings& settings, const QLis
         m_settings = settings;
     } else {
         m_settings.applySettings(settingsKeys, settings);
+    }
+
+    if (settingsKeys.contains("replayLength") || settingsKeys.contains("devSampleRate") || force) {
+        m_replayBuffer.setSize(m_settings.m_replayLength, m_settings.m_devSampleRate);
+    }
+
+    if (settingsKeys.contains("replayOffset") || settingsKeys.contains("devSampleRate")  || force) {
+        m_replayBuffer.setReadOffset(((unsigned)(m_settings.m_replayOffset * m_settings.m_devSampleRate)) * 2);
+    }
+
+    if (settingsKeys.contains("replayLoop") || force) {
+        m_replayBuffer.setLoop(m_settings.m_replayLoop);
     }
 
     if (forwardChange)

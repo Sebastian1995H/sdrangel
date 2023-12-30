@@ -1,6 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014-2015 John Greb <hexameron@spam.no>                         //
+// Copyright (C) 2015-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2020 Kacper Michajłow <kasper93@gmail.com>                      //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -173,6 +177,7 @@ public:
 
     virtual int getNbSinkStreams() const { return 1; }
     virtual int getNbSourceStreams() const { return 0; }
+    virtual int getStreamIndex() const { return m_settings.m_streamIndex; }
 
     virtual qint64 getStreamCenterFrequency(int streamIndex, bool sinkElseSource) const
     {
@@ -209,7 +214,7 @@ public:
             SWGSDRangel::SWGChannelSettings& response);
 
     uint32_t getNumberOfDeviceStreams() const;
-	void setScopeXYSink(BasebandSampleSink* sampleSink) { if (m_running) { m_basebandSink->setScopeXYSink(sampleSink); } }
+	void setScopeXYSink(BasebandSampleSink* sampleSink);
 	void configureMyPosition(float myLatitude, float myLongitude) { if (m_running) { m_basebandSink->configureMyPosition(myLatitude, myLongitude); } }
 	double getMagSq() { return m_running ? m_basebandSink->getMagSq() : 0.0; }
 	bool getSquelchOpen() const { return m_running && m_basebandSink->getSquelchOpen(); }
@@ -281,7 +286,7 @@ private:
     bool m_running;
 	M17DemodSettings m_settings;
     int m_basebandSampleRate; //!< stored from device message used when starting baseband sink
-
+    BasebandSampleSink *m_scopeXYSink;
     QNetworkAccessManager *m_networkManager;
     QNetworkRequest m_networkRequest;
 

@@ -1,6 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015-2018 Edouard Griffiths, F4EXB.                             //
-// Copyright (C) 2023 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -308,6 +307,7 @@ public:
 
     virtual int getNbSinkStreams() const { return 1; }
     virtual int getNbSourceStreams() const { return 0; }
+    virtual int getStreamIndex() const { return m_settings.m_streamIndex; }
 
     virtual qint64 getStreamCenterFrequency(int streamIndex, bool sinkElseSource) const
     {
@@ -351,6 +351,7 @@ public:
     uint32_t getNumberOfDeviceStreams() const;
 
     void calcScannerSampleRate(int channelBW, int basebandSampleRate, int& scannerSampleRate, int& fftSize, int& binsPerChannel);
+    static void muteAll(const FreqScannerSettings& settings);
 
     static const char * const m_channelIdURI;
     static const char * const m_channelId;
@@ -370,8 +371,8 @@ private:
 
     QHash<ChannelAPI*, FreqScannerSettings::AvailableChannel> m_availableChannels;
 
-    int m_scanDeviceSetIndex;
-    int m_scanChannelIndex;
+    unsigned int m_scanDeviceSetIndex;
+    unsigned int m_scanChannelIndex;
     qint64 m_activeFrequency;
     QDateTime m_minFFTStartTime;
     int m_scannerSampleRate;
@@ -408,6 +409,7 @@ private:
     void initScan();
     void processScanResults(const QDateTime& fftStartTime, const QList<MsgScanResult::ScanResult>& results);
     void setDeviceCenterFrequency(qint64 frequency);
+    void applyChannelSetting(const QString& channel);
 
     static QList<SWGSDRangel::SWGFreqScannerFrequency *> *createFrequencyList(const FreqScannerSettings& settings);
 
@@ -416,6 +418,7 @@ private slots:
     void handleIndexInDeviceSetChanged(int index);
     void handleChannelAdded(int deviceSetIndex, ChannelAPI* channel);
     void handleChannelRemoved(int deviceSetIndex, ChannelAPI* channel);
+    void handleChannelStreamIndexChanged(int streamIndex, ChannelAPI* channel);
     void timeout();
 
 };

@@ -1,6 +1,16 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
 // written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2017 Ziga S <ziga.svetina@gmail.com>                            //
+// Copyright (C) 2018 beta-tester <alpha-beta-release@gmx.net>                   //
+// Copyright (C) 2019 Vort <vvort@yandex.ru>                                     //
+// Copyright (C) 2019 Davide Gerhard <rainbow@irh.it>                            //
+// Copyright (C) 2019 Stefan Biereigel <stefan@biereigel.de>                     //
+// Copyright (C) 2020-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2022 CRD716 <crd716@gmail.com>                                  //
+// Copyright (C) 2023 Mohamed <mohamedadlyi@github.com>                          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -64,6 +74,7 @@
 #include "gui/loggingdialog.h"
 #include "gui/deviceuserargsdialog.h"
 #include "gui/sdrangelsplash.h"
+#include "gui/mdiutils.h"
 #include "gui/mypositiondialog.h"
 #include "gui/fftdialog.h"
 #include "gui/fftwisdomdialog.h"
@@ -1491,10 +1502,17 @@ void MainWindow::loadConfiguration(const Configuration *configuration, bool from
                 deviceWorkspaceIndex;
             sampleMIMOAdd(m_workspaces[deviceWorkspaceIndex], m_workspaces[spectrumWorkspaceIndex], bestDeviceIndex);
         }
+        else
+        {
+            qDebug() << "MainWindow::loadConfiguration: Unknown preset type: " << deviceSetPreset.getPresetType();
+        }
 
-        m_deviceUIs.back()->m_deviceGUI->restoreGeometry(deviceSetPreset.getDeviceGeometry());
-        m_deviceUIs.back()->m_mainSpectrumGUI->restoreGeometry(deviceSetPreset.getSpectrumGeometry());
-        m_deviceUIs.back()->loadDeviceSetSettings(&deviceSetPreset, m_pluginManager->getPluginAPI(), &m_workspaces, nullptr);
+        if (m_deviceUIs.size() > 0)
+        {
+            MDIUtils::restoreMDIGeometry(m_deviceUIs.back()->m_deviceGUI, deviceSetPreset.getDeviceGeometry());
+            MDIUtils::restoreMDIGeometry(m_deviceUIs.back()->m_mainSpectrumGUI, deviceSetPreset.getSpectrumGeometry());
+            m_deviceUIs.back()->loadDeviceSetSettings(&deviceSetPreset, m_pluginManager->getPluginAPI(), &m_workspaces, nullptr);
+        }
 
         if (waitBox)
         {
@@ -1571,9 +1589,9 @@ void MainWindow::saveConfiguration(Configuration *configuration)
     {
         deviceSetPresets.push_back(Preset());
         deviceUISet->saveDeviceSetSettings(&deviceSetPresets.back());
-        deviceSetPresets.back().setSpectrumGeometry(deviceUISet->m_mainSpectrumGUI->saveGeometry());
+        deviceSetPresets.back().setSpectrumGeometry(MDIUtils::saveMDIGeometry(deviceUISet->m_mainSpectrumGUI));
         deviceSetPresets.back().setSpectrumWorkspaceIndex(deviceUISet->m_mainSpectrumGUI->getWorkspaceIndex());
-        deviceSetPresets.back().setDeviceGeometry(deviceUISet->m_deviceGUI->saveGeometry());
+        deviceSetPresets.back().setDeviceGeometry(MDIUtils::saveMDIGeometry(deviceUISet->m_deviceGUI));
         deviceSetPresets.back().setDeviceWorkspaceIndex(deviceUISet->m_deviceGUI->getWorkspaceIndex());
         qDebug("MainWindow::saveConfiguration: %s device in workspace %d spectrum in %d",
             qPrintable(deviceUISet->m_deviceAPI->getSamplingDeviceId()),

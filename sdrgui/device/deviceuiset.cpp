@@ -1,5 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2016 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -26,6 +29,7 @@
 #include "gui/glspectrumview.h"
 #include "gui/glspectrumgui.h"
 // #include "gui/channelwindow.h"
+#include "gui/mdiutils.h"
 #include "gui/workspace.h"
 #include "gui/rollupcontents.h"
 #include "device/devicegui.h"
@@ -69,6 +73,8 @@ DeviceUISet::DeviceUISet(int deviceSetIndex, DeviceSet *deviceSet)
     font.setFamily(QStringLiteral("Liberation Sans"));
     font.setPointSize(9);
     m_spectrum->setFont(font);
+
+    connect(m_mainSpectrumGUI, &MainSpectrumGUI::timeSelected, this, &DeviceUISet::onTimeSelected);
 }
 
 DeviceUISet::~DeviceUISet()
@@ -248,8 +254,8 @@ void DeviceUISet::loadDeviceSetSettings(
     qDebug("DeviceUISet::loadDeviceSetSettings: preset: [%s, %s]",
         qPrintable(preset->getGroup()), qPrintable(preset->getDescription()));
     m_spectrumGUI->deserialize(preset->getSpectrumConfig());
-    m_mainSpectrumGUI->restoreGeometry(preset->getSpectrumGeometry());
-    m_deviceGUI->restoreGeometry(preset->getDeviceGeometry());
+    MDIUtils::restoreMDIGeometry(m_mainSpectrumGUI, preset->getSpectrumGeometry());
+    MDIUtils::restoreMDIGeometry(m_deviceGUI, preset->getDeviceGeometry());
     m_deviceAPI->loadSamplingDeviceSettings(preset);
 
     if (!preset->getShowSpectrum()) {
@@ -271,8 +277,8 @@ void DeviceUISet::saveDeviceSetSettings(Preset* preset) const
         qPrintable(preset->getGroup()), qPrintable(preset->getDescription()));
     preset->setSpectrumConfig(m_spectrumGUI->serialize());
     preset->setSpectrumWorkspaceIndex(m_mainSpectrumGUI->getWorkspaceIndex());
-    preset->setSpectrumGeometry(m_mainSpectrumGUI->saveGeometry());
-    preset->setDeviceGeometry(m_deviceGUI->saveGeometry());
+    preset->setSpectrumGeometry(MDIUtils::saveMDIGeometry(m_mainSpectrumGUI));
+    preset->setDeviceGeometry(MDIUtils::saveMDIGeometry(m_deviceGUI));
     preset->setShowSpectrum(m_spectrumGUI->isVisible());
     preset->setSelectedDevice(Preset::SelectedDevice{
         m_deviceAPI->getSamplingDeviceId(),
@@ -379,7 +385,7 @@ void DeviceUISet::loadRxChannelSettings(const Preset *preset, PluginAPI *pluginA
                     rxChannelGUI->hide();
                 }
 
-                rxChannelGUI->restoreGeometry(rxChannelGUI->getGeometryBytes());
+                MDIUtils::restoreMDIGeometry(rxChannelGUI, rxChannelGUI->getGeometryBytes());
                 rxChannelGUI->getRollupContents()->arrangeRollups();
                 rxChannelGUI->setDeviceType(ChannelGUI::DeviceRx);
                 rxChannelGUI->setDeviceSetIndex(m_deviceSetIndex);
@@ -420,8 +426,7 @@ void DeviceUISet::saveRxChannelSettings(Preset *preset) const
         for (int i = 0; i < m_channelInstanceRegistrations.count(); i++)
         {
             ChannelGUI *channelGUI = m_channelInstanceRegistrations[i].m_gui;
-            qDebug("DeviceUISet::saveRxChannelSettings: saving channel [%s]", qPrintable(m_channelInstanceRegistrations[i].m_channelAPI->getURI()));
-            channelGUI->setGeometryBytes(channelGUI->saveGeometry());
+            channelGUI->setGeometryBytes(MDIUtils::saveMDIGeometry(channelGUI));
             channelGUI->zetHidden(channelGUI->isHidden());
             preset->addChannel(m_channelInstanceRegistrations[i].m_channelAPI->getURI(), channelGUI->serialize());
         }
@@ -508,7 +513,7 @@ void DeviceUISet::loadTxChannelSettings(const Preset *preset, PluginAPI *pluginA
                     txChannelGUI->hide();
                 }
 
-                txChannelGUI->restoreGeometry(txChannelGUI->getGeometryBytes());
+                MDIUtils::restoreMDIGeometry(txChannelGUI, txChannelGUI->getGeometryBytes());
                 txChannelGUI->getRollupContents()->arrangeRollups();
                 txChannelGUI->setDeviceType(ChannelGUI::DeviceTx);
                 txChannelGUI->setDeviceSetIndex(m_deviceSetIndex);
@@ -551,7 +556,7 @@ void DeviceUISet::saveTxChannelSettings(Preset *preset) const
         {
             ChannelGUI *channelGUI = m_channelInstanceRegistrations[i].m_gui;
             qDebug("DeviceUISet::saveTxChannelSettings: saving channel [%s]", qPrintable(m_channelInstanceRegistrations[i].m_channelAPI->getURI()));
-            channelGUI->setGeometryBytes(channelGUI->saveGeometry());
+            channelGUI->setGeometryBytes(MDIUtils::saveMDIGeometry(channelGUI));
             channelGUI->zetHidden(channelGUI->isHidden());
             preset->addChannel(m_channelInstanceRegistrations[i].m_channelAPI->getURI(), channelGUI->serialize());
         }
@@ -682,7 +687,7 @@ void DeviceUISet::loadMIMOChannelSettings(const Preset *preset, PluginAPI *plugi
                     channelGUI->hide();
                 }
 
-                channelGUI->restoreGeometry(channelGUI->getGeometryBytes());
+                MDIUtils::restoreMDIGeometry(channelGUI, channelGUI->getGeometryBytes());
                 channelGUI->getRollupContents()->arrangeRollups();
                 channelGUI->setDeviceType(ChannelGUI::DeviceMIMO);
                 channelGUI->setDeviceSetIndex(m_deviceSetIndex);
@@ -731,7 +736,7 @@ void DeviceUISet::saveMIMOChannelSettings(Preset *preset) const
         {
             ChannelGUI *channelGUI = m_channelInstanceRegistrations[i].m_gui;
             qDebug("DeviceUISet::saveMIMOChannelSettings: saving channel [%s]", qPrintable(m_channelInstanceRegistrations[i].m_channelAPI->getURI()));
-            channelGUI->setGeometryBytes(channelGUI->saveGeometry());
+            channelGUI->setGeometryBytes(MDIUtils::saveMDIGeometry(channelGUI));
             channelGUI->zetHidden(channelGUI->isHidden());
             preset->addChannel(m_channelInstanceRegistrations[i].m_channelAPI->getURI(), channelGUI->serialize());
         }
@@ -821,4 +826,13 @@ int DeviceUISet::webapiSpectrumServerPost(SWGSDRangel::SWGSuccessResponse& respo
 int DeviceUISet::webapiSpectrumServerDelete(SWGSDRangel::SWGSuccessResponse& response, QString& errorMessage)
 {
     return m_spectrumVis->webapiSpectrumServerDelete(response, errorMessage);
+}
+
+void DeviceUISet::onTimeSelected(int deviceSetIndex, float time)
+{
+    (void) deviceSetIndex;
+
+    if (m_deviceGUI) {
+        m_deviceGUI->setReplayTime(time);
+    }
 }

@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2022-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -334,7 +335,7 @@ void M17DemodSink::applySettings(const M17DemodSettings& settings, const QList<Q
     }
 
     if (settingsKeys.contains("fmDeviation") || force) {
-        m_phaseDiscri.setFMScaling(48000.0f / (2.0f*settings.m_fmDeviation));
+        m_phaseDiscri.setFMScaling(48000.0f / (2.0f*M_PI*settings.m_fmDeviation));
     }
 
     if (settingsKeys.contains("squelchGate") || force)

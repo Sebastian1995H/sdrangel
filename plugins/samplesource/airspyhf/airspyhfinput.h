@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2018 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -24,6 +28,7 @@
 #include <QThread>
 
 #include <libairspyhf/airspyhf.h>
+#include "dsp/replaybuffer.h"
 #include <dsp/devicesamplesource.h>
 
 #include "airspyhfsettings.h"
@@ -81,7 +86,26 @@ public:
         { }
     };
 
-	AirspyHFInput(DeviceAPI *deviceAPI);
+  class MsgSaveReplay : public Message {
+        MESSAGE_CLASS_DECLARATION
+
+    public:
+        QString getFilename() const { return m_filename; }
+
+        static MsgSaveReplay* create(const QString& filename) {
+            return new MsgSaveReplay(filename);
+        }
+
+    protected:
+        QString m_filename;
+
+        MsgSaveReplay(const QString& filename) :
+            Message(),
+            m_filename(filename)
+        { }
+    };
+
+    AirspyHFInput(DeviceAPI *deviceAPI);
 	virtual ~AirspyHFInput();
 	virtual void destroy();
 
@@ -151,6 +175,7 @@ private:
 	bool m_running;
     QNetworkAccessManager *m_networkManager;
     QNetworkRequest m_networkRequest;
+    ReplayBuffer<float> m_replayBuffer;
 
 	bool openDevice();
 	void closeDevice();
@@ -160,6 +185,7 @@ private:
     void webapiFormatDeviceReport(SWGSDRangel::SWGDeviceReport& response);
     void webapiReverseSendSettings(const QList<QString>& deviceSettingsKeys, const AirspyHFSettings& settings, bool force);
     void webapiReverseSendStartStop(bool start);
+    uint32_t getSampleRateFromIndex(quint32 devSampleRateIndex) const;
 
 private slots:
     void networkManagerFinished(QNetworkReply *reply);

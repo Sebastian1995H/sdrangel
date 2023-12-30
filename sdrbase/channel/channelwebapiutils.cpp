@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2020 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2020-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>         //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -332,10 +333,11 @@ bool ChannelWebAPIUtils::getCenterFrequency(unsigned int deviceIndex, double &fr
 }
 
 // Set device center frequency
+// Doesn't support MIMO devices. We'd need stream index parameter
 bool ChannelWebAPIUtils::setCenterFrequency(unsigned int deviceIndex, double frequencyInHz)
 {
     SWGSDRangel::SWGDeviceSettings deviceSettingsResponse;
-    int httpRC;
+    int httpRC = 404;
     DeviceSet *deviceSet;
 
     if (getDeviceSettings(deviceIndex, deviceSettingsResponse, deviceSet))
@@ -353,8 +355,13 @@ bool ChannelWebAPIUtils::setCenterFrequency(unsigned int deviceIndex, double fre
             SWGSDRangel::SWGErrorResponse errorResponse2;
 
             DeviceSampleSource *source = deviceSet->m_deviceAPI->getSampleSource();
-
-            httpRC = source->webapiSettingsPutPatch(false, deviceSettingsKeys, deviceSettingsResponse, *errorResponse2.getMessage());
+            if (source) {
+                httpRC = source->webapiSettingsPutPatch(false, deviceSettingsKeys, deviceSettingsResponse, *errorResponse2.getMessage());
+            }
+            DeviceSampleSink *sink = deviceSet->m_deviceAPI->getSampleSink();
+            if (sink) {
+                httpRC = sink->webapiSettingsPutPatch(false, deviceSettingsKeys, deviceSettingsResponse, *errorResponse2.getMessage());
+            }
 
             if (httpRC/100 == 2)
             {
@@ -1283,6 +1290,53 @@ bool ChannelWebAPIUtils::patchFeatureSetting(unsigned int featureSetIndex, unsig
         else
         {
             qWarning("ChannelWebAPIUtils::patchFeatureSetting: no key %s in feature settings", qPrintable(setting));
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool ChannelWebAPIUtils::patchChannelSetting(unsigned int deviceSetIndex, unsigned int channelIndex, const QString &setting, double value)
+{
+    SWGSDRangel::SWGChannelSettings channelSettingsResponse;
+    QString errorResponse;
+    int httpRC;
+    ChannelAPI *channel;
+
+    if (getChannelSettings(deviceSetIndex, channelIndex, channelSettingsResponse, channel))
+    {
+        // Patch settings
+        QJsonObject *jsonObj = channelSettingsResponse.asJsonObject();
+        double oldValue;
+        if (WebAPIUtils::getSubObjectDouble(*jsonObj, setting, oldValue))
+        {
+            WebAPIUtils::setSubObjectDouble(*jsonObj, setting, value);
+            QStringList channelSettingsKeys;
+            channelSettingsKeys.append(setting);
+            channelSettingsResponse.init();
+            channelSettingsResponse.fromJsonObject(*jsonObj);
+            SWGSDRangel::SWGErrorResponse errorResponse2;
+
+            httpRC = channel->webapiSettingsPutPatch(false, channelSettingsKeys, channelSettingsResponse, *errorResponse2.getMessage());
+
+            if (httpRC/100 == 2)
+            {
+                qDebug("ChannelWebAPIUtils::patchChannelSetting: set feature setting %s to %f OK", qPrintable(setting), value);
+                return true;
+            }
+            else
+            {
+                qWarning("ChannelWebAPIUtils::patchChannelSetting: set feature setting %s to %f error %d: %s",
+                    qPrintable(setting), value, httpRC, qPrintable(*errorResponse2.getMessage()));
+                return false;
+            }
+        }
+        else
+        {
+            qWarning("ChannelWebAPIUtils::patchChannelSetting: no key %s in feature settings", qPrintable(setting));
             return false;
         }
     }

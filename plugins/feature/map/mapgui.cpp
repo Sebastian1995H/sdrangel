@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
-// Copyright (C) 2020 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2021-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2021-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -334,6 +334,7 @@ MapGUI::MapGUI(PluginAPI* pluginAPI, FeatureUISet *featureUISet, Feature *featur
     new DialogPositioner(&m_beaconDialog, true);
     new DialogPositioner(&m_ibpBeaconDialog, true);
     new DialogPositioner(&m_radioTimeDialog, true);
+    m_resizer.enableChildMouseTracking();
 }
 
 MapGUI::~MapGUI()
@@ -1188,11 +1189,12 @@ void MapGUI::applyMap2DSettings(bool reloadMap)
             if (!m_settings.m_mapBoxStyles.isEmpty())
                 parameters["mapboxgl.mapping.additional_style_urls"] = m_settings.m_mapBoxStyles;
         }
-        if (m_settings.m_mapProvider == "maplibre")
+        if (m_settings.m_mapProvider == "maplibregl")
         {
-            parameters["maplibre.access_token"] = m_settings.m_mapBoxAPIKey;
+            parameters["maplibregl.settings_template"] = "maptiler"; // Or "mapbox"
+            parameters["maplibregl.access_token"] = m_settings.m_maptilerAPIKey;
             if (!m_settings.m_mapBoxStyles.isEmpty())
-                parameters["maplibre.mapping.additional_style_urls"] = m_settings.m_mapBoxStyles;
+                parameters["maplibregl.mapping.additional_style_urls"] = m_settings.m_mapBoxStyles;
         }
         if (m_settings.m_mapProvider == "osm")
         {

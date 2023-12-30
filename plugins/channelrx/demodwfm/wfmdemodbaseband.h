@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2019 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2019-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -20,6 +22,7 @@
 
 #include <QObject>
 #include <QRecursiveMutex>
+#include <QDateTime>
 
 #include "dsp/samplesinkfifo.h"
 #include "util/message.h"
@@ -73,6 +76,7 @@ public:
     void setChannel(ChannelAPI *channel);
     void setFifoLabel(const QString& label) { m_sampleFifo.setLabel(label); }
     void setAudioFifoLabel(const QString& label) { m_sink.setAudioFifoLabel(label); }
+    QDateTime getAudioFifoErrorDateTime() { return m_audioFifoErrorDateTime; }
 
 private:
     SampleSinkFifo m_sampleFifo;
@@ -82,6 +86,7 @@ private:
 	MessageQueue m_inputMessageQueue; //!< Queue for asynchronous inbound communication
     WFMDemodSettings m_settings;
     QRecursiveMutex m_mutex;
+    QDateTime m_audioFifoErrorDateTime;
 
     bool handleMessage(const Message& cmd);
     void applySettings(const WFMDemodSettings& settings, bool force = false);
@@ -89,6 +94,8 @@ private:
 private slots:
     void handleInputMessages();
     void handleData(); //!< Handle data when samples have to be processed
+    void audioUnderflow();
+    void audioOverflow();
 };
 
 #endif // INCLUDE_WFMDEMODBASEBAND_H

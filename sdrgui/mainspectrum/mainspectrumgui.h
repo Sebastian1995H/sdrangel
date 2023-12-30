@@ -1,5 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -110,12 +113,14 @@ private slots:
     void shrinkWindow();
     void maximizeWindow();
     void onRequestCenterFrequency(qint64 frequency);
+    void onTimeSelected(float time);
 
 signals:
     void closing();
     void moveToWorkspace(int workspaceIndex);
     void forceShrink();
     void requestCenterFrequency(int deviceSetIndex, qint64 frequency); // an action from the user to move device center frequency
+    void timeSelected(int deviceSetIndex, float time); // user ctrl-clicked waterfall to set a time
 };
 
 

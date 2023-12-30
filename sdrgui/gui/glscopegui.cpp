@@ -1,6 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2017-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -1313,6 +1315,7 @@ void GLScopeGUI::fillProjectionCombo(QComboBox* comboBox)
     comboBox->addItem("Imag", Projector::ProjectionImag);
     comboBox->addItem("Mag", Projector::ProjectionMagLin);
     comboBox->addItem("MagSq", Projector::ProjectionMagSq);
+    comboBox->addItem("dMagSq", Projector::ProjectionDMagSq);
     comboBox->addItem("MagdB", Projector::ProjectionMagDB);
     comboBox->addItem("Phi", Projector::ProjectionPhase);
     comboBox->addItem("DOAP", Projector::ProjectionDOAP);

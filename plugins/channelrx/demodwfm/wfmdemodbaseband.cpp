@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2019 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2019-2021 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -44,6 +46,8 @@ WFMDemodBaseband::WFMDemodBaseband()
     m_channelSampleRate = 0;
 
     connect(&m_inputMessageQueue, SIGNAL(messageEnqueued()), this, SLOT(handleInputMessages()));
+    connect(m_sink.getAudioFifo(), &AudioFifo::underflow, this, &WFMDemodBaseband::audioUnderflow);
+    connect(m_sink.getAudioFifo(), &AudioFifo::overflow, this, &WFMDemodBaseband::audioOverflow);
 }
 
 WFMDemodBaseband::~WFMDemodBaseband()
@@ -187,4 +191,14 @@ void WFMDemodBaseband::setBasebandSampleRate(int sampleRate)
 {
     m_channelizer->setBasebandSampleRate(sampleRate);
     m_sink.applyChannelSettings(m_channelizer->getChannelSampleRate(), m_channelizer->getChannelFrequencyOffset());
+}
+
+void WFMDemodBaseband::audioUnderflow()
+{
+    m_audioFifoErrorDateTime = QDateTime::currentDateTime();
+}
+
+void WFMDemodBaseband::audioOverflow()
+{
+    m_audioFifoErrorDateTime = QDateTime::currentDateTime();
 }

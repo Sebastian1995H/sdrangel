@@ -1,6 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 Edouard Griffiths, F4EXB                                   //
-// Copyright (C) 2020 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2020 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -28,6 +31,7 @@
 
 #include "dsp/samplesinkfifo.h"
 #include "dsp/decimators.h"
+#include "dsp/replaybuffer.h"
 #include "usrp/deviceusrpshared.h"
 #include "usrp/deviceusrp.h"
 
@@ -36,7 +40,8 @@ class USRPInputThread : public QThread, public DeviceUSRPShared::ThreadInterface
     Q_OBJECT
 
 public:
-    USRPInputThread(uhd::rx_streamer::sptr stream, size_t bufSamples, SampleSinkFifo* sampleFifo, QObject* parent = 0);
+    USRPInputThread(uhd::rx_streamer::sptr stream, size_t bufSamples, SampleSinkFifo* sampleFifo,
+        ReplayBuffer<qint16> *replayBuffer, QObject* parent = 0);
     ~USRPInputThread();
 
     virtual void startWork();
@@ -61,6 +66,7 @@ private:
     size_t m_bufSamples;
     SampleVector m_convertBuffer;
     SampleSinkFifo* m_sampleFifo;
+	ReplayBuffer<qint16> *m_replayBuffer;
 
     unsigned int m_log2Decim; // soft decimation
 

@@ -1,5 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2020-2022 Edouard Griffiths, F4EXB                              //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2022-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -78,6 +81,7 @@ public:
     void setCurrentDeviceIndex(int index) { m_currentDeviceIndex = index; } //!< index in plugins list
     void setChannelNames(const QStringList& channelNames) { m_channelAddDialog.addChannelNames(channelNames); }
     DeviceUISet* getDeviceUISet() { return m_deviceUISet; }
+    virtual void setReplayTime(float time) { (void) time; } //!< Not supported by all devices
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -96,6 +100,7 @@ protected:
     QString m_helpURL;
     QWidget *m_contents;
     ContextMenuType m_contextMenuType;
+    FramelessWindowResizer m_resizer;
 
 protected slots:
     void shrinkWindow();
@@ -130,7 +135,6 @@ private:
     QPoint m_DragPosition;
     int m_currentDeviceIndex; //!< Index in device plugins registrations
     ChannelAddDialog m_channelAddDialog;
-    FramelessWindowResizer m_resizer;
 
 private slots:
     void activateSettingsDialog();

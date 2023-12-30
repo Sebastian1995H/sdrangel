@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2017-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -1919,6 +1919,7 @@ void GLScope::setYScale(ScaleEngine &scale, uint32_t highlightedTraceIndex)
         // break;
     case Projector::ProjectionReal: // Linear generic
     case Projector::ProjectionImag:
+    case Projector::ProjectionDMagSq:
     default:
         if (amp_range < 1e-9) {
             scale.setRange(Unit::None, -amp_range * 5e11  + amp_ofs * 1e12, amp_range * 5e11  + amp_ofs * 1e12);

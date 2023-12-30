@@ -1,6 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2016 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014-2015 John Greb <hexameron@spam.no>                         //
+// Copyright (C) 2015-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2020 Kacper Michajłow <kasper93@gmail.com>                      //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -59,7 +64,8 @@ DSDDemod::DSDDemod(DeviceAPI *deviceAPI) :
         ChannelAPI(m_channelIdURI, ChannelAPI::StreamSingleSink),
         m_deviceAPI(deviceAPI),
         m_running(false),
-        m_basebandSampleRate(0)
+        m_basebandSampleRate(0),
+        m_scopeXYSink(nullptr)
 {
     qDebug("DSDDemod::DSDDemod");
 	setObjectName(m_channelId);
@@ -175,6 +181,7 @@ void DSDDemod::start()
     if (m_basebandSampleRate != 0) {
         m_basebandSink->setBasebandSampleRate(m_basebandSampleRate);
     }
+    m_basebandSink->setScopeXYSink(m_scopeXYSink);
 
     m_thread->start();
 
@@ -196,6 +203,14 @@ void DSDDemod::stop()
     m_running = false;
 	m_thread->exit();
 	m_thread->wait();
+}
+
+void DSDDemod::setScopeXYSink(BasebandSampleSink* sampleSink)
+{
+    m_scopeXYSink = sampleSink;
+    if (m_running) {
+        m_basebandSink->setScopeXYSink(sampleSink);
+    }
 }
 
 bool DSDDemod::handleMessage(const Message& cmd)
@@ -380,6 +395,8 @@ void DSDDemod::applySettings(const DSDDemodSettings& settings, bool force)
             m_deviceAPI->removeChannelSink(this, m_settings.m_streamIndex);
             m_deviceAPI->addChannelSink(this, settings.m_streamIndex);
             m_deviceAPI->addChannelSinkAPI(this);
+            m_settings.m_streamIndex = settings.m_streamIndex; // make sure ChannelAPI::getStreamIndex() is consistent
+            emit streamIndexChanged(settings.m_streamIndex);
         }
 
         reverseAPIKeys.append("streamIndex");

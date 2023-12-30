@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2022-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -195,9 +196,9 @@ bool M17DemodProcessor::decode_lsf(modemm17::M17FrameDecoder::lsf_buffer_t const
     m_currentPacket.clear();
     m_packetFrameCounter = 0;
 
-    if (!lsf[111]) // LSF type bit 0
+    if (!(lsf[13] & 1)) // LSF type bit 0
     {
-        uint8_t packet_type = (lsf[109] << 1) | lsf[110];
+        uint8_t packet_type = (lsf[13] >> 1) & 0x3;
 
         switch (packet_type)
         {
@@ -251,10 +252,10 @@ void M17DemodProcessor::decode_type(uint16_t type)
                 m_typeInfo += "UNK";
                 break;
             case 1:
-                m_typeInfo += "RAW";
+                m_typeInfo += "DAT";
                 break;
             case 2:
-                m_typeInfo += "ENC";
+                m_typeInfo += "ENC"; // Encapsulated passes LSF up stack along with data
                 break;
             case 3:
                 m_typeInfo += "UNK";
@@ -328,7 +329,7 @@ bool M17DemodProcessor::decode_packet(modemm17::M17FrameDecoder::packet_buffer_t
             crc16(*it);
         }
 
-        uint16_t calcChecksum = crc16.get_bytes()[0] + (crc16.get_bytes()[1]<<8);
+        uint16_t calcChecksum = crc16.get_bytes()[1] + (crc16.get_bytes()[0]<<8);
         uint16_t xmitChecksum = m_currentPacket.back() + (m_currentPacket.end()[-2]<<8);
 
         if (calcChecksum == xmitChecksum) // (checksum == 0x0f47)

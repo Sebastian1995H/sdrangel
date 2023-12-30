@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2019 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2019-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -167,16 +168,16 @@ void NFMModSource::modulateSample()
     calculateLevel(t);
 
     if (m_settings.m_ctcssOn) {
-        t1 = (0.85f * m_bandpass.filter(t) + 0.15f * 0.625f * m_ctcssNco.next()) * 1.2f;
+        t1 = 0.85f * m_bandpass.filter(t) + 0.15f * 0.625f * m_ctcssNco.next();
     } else if (m_settings.m_dcsOn) {
-        t1 = (0.9f * m_bandpass.filter(t) + 0.1f * 0.625f * m_dcsMod.next()) * 1.2f;
+        t1 = 0.9f * m_bandpass.filter(t) + 0.1f * 0.625f * m_dcsMod.next();
     } else if (m_settings.m_bpfOn) {
-        t1 = m_bandpass.filter(t) * 1.2f;
+        t1 = m_bandpass.filter(t);
     } else {
-        t1 = m_lowpass.filter(t) * 1.2f;
+        t1 = m_lowpass.filter(t);
     }
 
-    m_modPhasor += (m_settings.m_fmDeviation / (float) m_audioSampleRate) * t1;
+    m_modPhasor += (M_PI * m_settings.m_fmDeviation / (float) m_audioSampleRate) * t1;
 
     // limit phasor range to ]-pi,pi]
     if (m_modPhasor > M_PI) {

@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2019 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2015 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2021 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // API for channels                                                              //
 //                                                                               //
@@ -149,6 +153,7 @@ public:
     StreamType getStreamType() const { return m_streamType; }
     virtual int getNbSinkStreams() const = 0;
     virtual int getNbSourceStreams() const = 0;
+    virtual int getStreamIndex() const = 0;
     virtual qint64 getStreamCenterFrequency(int streamIndex, bool sinkElseSource) const = 0;
 
     void handlePipeMessageQueue(MessageQueue* messageQueue)
@@ -183,6 +188,7 @@ private:
 
 signals:
     void indexInDeviceSetChanged(int index);
+    void streamIndexChanged(int index);
 };
 
 

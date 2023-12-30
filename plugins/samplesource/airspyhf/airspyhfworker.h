@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2018 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -19,6 +23,7 @@
 #define INCLUDE_AIRSPYHFWORKER_H
 
 #include <dsp/decimatorsfi.h>
+#include "dsp/replaybuffer.h"
 #include <QObject>
 #include <libairspyhf/airspyhf.h>
 
@@ -30,7 +35,7 @@ class AirspyHFWorker : public QObject {
 	Q_OBJECT
 
 public:
-	AirspyHFWorker(airspyhf_device_t* dev, SampleSinkFifo* sampleFifo, QObject* parent = 0);
+	AirspyHFWorker(airspyhf_device_t* dev, SampleSinkFifo* sampleFifo, ReplayBuffer<float> *replayBuffer, QObject* parent = 0);
 	~AirspyHFWorker();
 
 	void startWork();
@@ -45,6 +50,7 @@ private:
 	qint16 m_buf[2*AIRSPYHF_BLOCKSIZE];
 	SampleVector m_convertBuffer;
 	SampleSinkFifo* m_sampleFifo;
+	ReplayBuffer<float> *m_replayBuffer;
 
 	int m_samplerate;
 	unsigned int m_log2Decim;

@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2015-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2018 beta-tester <alpha-beta-release@gmx.net>                   //
+// Copyright (C) 2018 Jason Gerecke <killertofu@gmail.com>                       //
+// Copyright (C) 2021-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2021 Andreas Baulig <free.geronimo@hotmail.de>                  //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -80,6 +84,7 @@ FileInputGUI::FileInputGUI(DeviceUISet *deviceUISet, QWidget* parent) :
     m_sampleSource->setMessageQueueToGUI(&m_inputMessageQueue);
 
     makeUIConnections();
+    m_resizer.enableChildMouseTracking();
 }
 
 FileInputGUI::~FileInputGUI()
@@ -314,7 +319,7 @@ void FileInputGUI::on_showFileDialog_clicked(bool checked)
 {
     (void) checked;
 	QString fileName = QFileDialog::getOpenFileName(this,
-	    tr("Open I/Q record file"), ".", tr("SDR I/Q Files (*.sdriq *.wav)"), 0);
+	    tr("Open I/Q record file"), QFileInfo(m_settings.m_fileName).dir().path(), tr("SDR I/Q Files (*.sdriq *.wav)"), 0);
 
 
 	if (fileName != "")

@@ -1,6 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2019, 2021 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2015 John Greb <hexameron@spam.no>                              //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -31,6 +33,7 @@ public:
         ProjectionImag,     //!< Extract imaginary part
         ProjectionMagLin,   //!< Calculate linear magnitude or modulus
         ProjectionMagSq,    //!< Calculate linear squared magnitude or power
+        ProjectionDMagSq,   //!< Calculate time derivative of linear squared magnitude or power
         ProjectionMagDB,    //!< Calculate logarithmic (dB) of squared magnitude
         ProjectionPhase,    //!< Calculate phase
         ProjectionDOAP,     //!< Calculate ambiguous DOA from phase as phase difference (assuming positive)
@@ -58,6 +61,7 @@ private:
     static Real normalizeAngle(Real angle);
     ProjectionType m_projectionType;
     Real m_prevArg;
+    Real m_prevVal;
     Real *m_cache;
     bool m_cacheMaster;
 };

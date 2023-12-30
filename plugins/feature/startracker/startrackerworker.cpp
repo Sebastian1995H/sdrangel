@@ -1,6 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
-// Copyright (C) 2020 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2021-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>               //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -500,13 +501,10 @@ void StarTrackerWorker::update()
     {
         // Get Az/El from Satellite Tracker
         double azimuth, elevation;
+        unsigned int satelliteTrackerFeatureSetIndex,satelliteTrackerFeatureIndex;
 
-        const QRegExp re("F([0-9]+):([0-9]+)");
-        if (re.indexIn(m_settings.m_target) >= 0)
+        if (MainCore::getFeatureIndexFromId(m_settings.m_target, satelliteTrackerFeatureSetIndex, satelliteTrackerFeatureIndex))
         {
-            int satelliteTrackerFeatureSetIndex = re.capturedTexts()[1].toInt();
-            int satelliteTrackerFeatureIndex = re.capturedTexts()[2].toInt();
-
             if (ChannelWebAPIUtils::getFeatureReportValue(satelliteTrackerFeatureSetIndex, satelliteTrackerFeatureIndex, "targetAzimuth", azimuth)
                 && ChannelWebAPIUtils::getFeatureReportValue(satelliteTrackerFeatureSetIndex, satelliteTrackerFeatureIndex, "targetElevation", elevation))
             {

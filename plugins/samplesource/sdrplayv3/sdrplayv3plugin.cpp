@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2016 Edouard Griffiths, F4EXB                                   //
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2021-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2021 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -32,7 +32,7 @@
 const PluginDescriptor SDRPlayV3Plugin::m_pluginDescriptor = {
     QStringLiteral("SDRPlayV3"),
     QStringLiteral("SDRPlayV3 Input"),
-    QStringLiteral("7.16.0"),
+    QStringLiteral("7.17.2"),
     QStringLiteral("(c) Jon Beniston, M7RCE and Edouard Griffiths, F4EXB"),
     QStringLiteral("https://github.com/f4exb/sdrangel"),
     true,
@@ -43,25 +43,38 @@ static constexpr const char* const m_hardwareID = "SDRplayV3";
 static constexpr const char* const m_deviceTypeID = SDRPLAYV3_DEVICE_TYPE_ID;
 
 SDRPlayV3Plugin::SDRPlayV3Plugin(QObject* parent) :
-    QObject(parent)
+    QObject(parent),
+    m_opened(false)
 {
     sdrplay_api_ErrT err;
     float ver = 0.0f;
 
-    qDebug() << "SDRPlayV3Plugin: calling sdrplay_api_Open()";
-    if ((err = sdrplay_api_Open()) != sdrplay_api_Success)
+    if ((err = sdrplay_api_Open()) == sdrplay_api_Success)
+    {
+        m_opened = true;
+
+        if ((err = sdrplay_api_ApiVersion(&ver)) == sdrplay_api_Success)
+        {
+            if (ver != SDRPLAY_API_VERSION) {
+                qCritical() << "SDRPlayV3Plugin::SDRPlayV3Plugin: SDRPlay API versions do not match " << ver << " " << SDRPLAY_API_VERSION;
+            }
+        }
+        else
+        {
+            qCritical() << "SDRPlayV3Plugin::SDRPlayV3Plugin: failed to get SDRPlay API version.";
+        }
+    }
+    else
+    {
         qCritical() << "SDRPlayV3Plugin::SDRPlayV3Plugin: sdrplay_api_Open() was unsuccessful. " << sdrplay_api_GetErrorString(err);
-
-    if ((err = sdrplay_api_ApiVersion(&ver)) != sdrplay_api_Success)
-        qCritical() << "SDRPlayV3Plugin::SDRPlayV3Plugin: failed to get SDRPlay API version.";
-
-    if (ver != SDRPLAY_API_VERSION)
-        qCritical() << "SDRPlayV3Plugin::SDRPlayV3Plugin: SDRPlay API versions do not match " << ver << " " << SDRPLAY_API_VERSION;
+    }
 }
 
 SDRPlayV3Plugin::~SDRPlayV3Plugin()
 {
-    sdrplay_api_Close();
+    if (m_opened) {
+        sdrplay_api_Close();
+    }
 }
 
 const PluginDescriptor& SDRPlayV3Plugin::getPluginDescriptor() const

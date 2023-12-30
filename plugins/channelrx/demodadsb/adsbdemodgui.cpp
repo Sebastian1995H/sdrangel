@@ -408,7 +408,6 @@ QString Aircraft::getLabel(const ADSBDemodSettings *settings) const
         if (m_altitudeValid)
         {
             QStringList row1;
-            int transitionAlt = 6500;
             QChar c = m_altitude >= settings->m_transitionAlt ? 'F' : 'A';
             // Convert altitude to flight level
             int fl = m_altitude / 100;
@@ -578,12 +577,7 @@ void AircraftModel::findOnMap(int index)
 // Get list of frequeny scanners to use in menu
 QStringList AirportModel::getFreqScanners() const
 {
-    QStringList list;
-    std::vector<ChannelAPI*> channels = MainCore::instance()->getChannels("sdrangel.channel.freqscanner");
-    for (const auto channel : channels) {
-        list.append(QString("R%1:%2").arg(channel->getDeviceSetIndex()).arg(channel->getIndexInDeviceSet()));
-    }
-    return list;
+    return MainCore::instance()->getChannelIds("sdrangel.channel.freqscanner");
 }
 
 // Send airport frequencies to frequency scanner with given id (Rn:n)
@@ -593,14 +587,10 @@ void AirportModel::sendToFreqScanner(int index, const QString& id)
         return;
     }
     const AirportInformation *airport = m_airports[index];
+    unsigned int deviceSet, channelIndex;
 
-    const QRegularExpression re("R([0-9]+):([0-9]+)");
-    QRegularExpressionMatch match = re.match(id);
-    if (match.hasMatch())
+    if (MainCore::getDeviceAndChannelIndexFromId(id, deviceSet, channelIndex))
     {
-        int deviceSet = match.capturedTexts()[1].toInt();
-        int channelIndex = match.capturedTexts()[2].toInt();
-
         QJsonArray array;
         for (const auto airportFrequency : airport->m_frequencies)
         {
@@ -868,12 +858,10 @@ bool NavAidModel::setData(const QModelIndex &index, const QVariant& value, int r
 // Set selected AM Demod to the given frequency (used to tune to ATC selected from airports on map)
 bool ADSBDemodGUI::setFrequency(qint64 targetFrequencyHz)
 {
-    const QRegularExpression re("R([0-9]+):([0-9]+)");
-    QRegularExpressionMatch match = re.match(m_settings.m_amDemod);
-    if (match.hasMatch())
+    unsigned int deviceSet, channelIndex;
+
+    if (MainCore::getDeviceAndChannelIndexFromId(m_settings.m_amDemod, deviceSet, channelIndex))
     {
-        int deviceSet = match.capturedTexts()[1].toInt();
-        int channelIndex = match.capturedTexts()[2].toInt();
         const int halfChannelBW = 20000/2;
         int dcOffset = halfChannelBW;
 
@@ -5033,6 +5021,7 @@ ADSBDemodGUI::ADSBDemodGUI(PluginAPI* pluginAPI, DeviceUISet *deviceUISet, Baseb
     m_redrawMapTimer.setSingleShot(true);
     ui->map->installEventFilter(this);
     DialPopup::addPopupsToChildDials(this);
+    m_resizer.enableChildMouseTracking();
 }
 
 ADSBDemodGUI::~ADSBDemodGUI()

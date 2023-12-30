@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2015 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -25,6 +29,7 @@
 #include <QNetworkRequest>
 
 #include "dsp/devicesamplesource.h"
+#include "dsp/replaybuffer.h"
 #include "limesdr/devicelimesdrshared.h"
 #include "limesdrinputsettings.h"
 
@@ -205,7 +210,26 @@ public:
         { }
     };
 
-    LimeSDRInput(DeviceAPI *deviceAPI);
+   class MsgSaveReplay : public Message {
+        MESSAGE_CLASS_DECLARATION
+
+    public:
+        QString getFilename() const { return m_filename; }
+
+        static MsgSaveReplay* create(const QString& filename) {
+            return new MsgSaveReplay(filename);
+        }
+
+    protected:
+        QString m_filename;
+
+        MsgSaveReplay(const QString& filename) :
+            Message(),
+            m_filename(filename)
+        { }
+    };
+
+   LimeSDRInput(DeviceAPI *deviceAPI);
     virtual ~LimeSDRInput();
     virtual void destroy();
 
@@ -276,6 +300,7 @@ private:
     lms_stream_t m_streamId;
     QNetworkAccessManager *m_networkManager;
     QNetworkRequest m_networkRequest;
+    ReplayBuffer<qint16> m_replayBuffer;
 
     bool openDevice();
     void closeDevice();

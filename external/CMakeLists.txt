@@ -12,7 +12,7 @@ set(CODEC2_TAG "v1.0.3")
 set(CM256CC_TAG c0e92b92aca3d1d36c990b642b937c64d363c559)
 set(MBELIB_TAG fe83b32c6a60cdd7bce8cecf3c7a0b9ec87a7667)
 set(SERIALDV_TAG "v1.1.4")
-set(DSDCC_TAG "v1.9.4")
+set(DSDCC_TAG "v1.9.5")
 set(LIMESUITE_TAG 70e3859a55d8d5353963a5318013c8454594769f)
 set(BLADERF_TAG "2021.02")
 set(LIBIIO_TAG 826563e41b5ce9890b75506f672017de8d76d52d)
@@ -31,6 +31,15 @@ set(SOAPYSDR_REMOTE_TAG "soapy-remote-0.5.1")
 set(AIRSPY_TAG "37c768ce9997b32e7328eb48972a7fda0a1f8554")
 set(HACKRF_TAG "v2022.09.1")
 set(LIBXML2_TAG "v2.10.4")
+set(UHD_TAG "v4.5.0.0")
+if (APPLE AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL x86_64))
+    # UHD fails to load with 1.80+
+    set(BOOST_TAG "1.78.0")
+    set(BOOST_TAG2 "1_78_0")
+else()
+    set(BOOST_TAG "1.83.0")
+    set(BOOST_TAG2 "1_83_0")
+endif()
 
 # For some external project macros
 include(ExternalProject)
@@ -340,7 +349,7 @@ endif (NOT FFTW3F_FOUND AND NOT USE_PRECOMPILED_LIBS)
 # So instead, we use FetchContent and build Boost at CMake configure time
 include(FetchContent)
 FetchContent_Declare(boost
-    URL https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.gz
+    URL "https://sourceforge.net/projects/boost/files/boost/${BOOST_TAG}/boost_${BOOST_TAG2}.tar.gz/download"
 )
 
 find_package(Boost QUIET)
@@ -474,7 +483,7 @@ if (NOT FFMPEG_FOUND AND NOT USE_PRECOMPILED_LIBS)
             UPDATE_DISCONNECTED TRUE
             DEPENDS ${MPG123_DEPENDS}
             PREFIX "${EXTERNAL_BUILD_LIBRARIES}/lame"
-            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${MPG123_PKG_CONFIG_DIR} <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --enable-shared
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${MPG123_PKG_CONFIG_DIR} <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --enable-shared --disable-frontend
             BUILD_COMMAND ${MAKE}
             TEST_COMMAND ""
             )
@@ -483,7 +492,11 @@ if (NOT FFMPEG_FOUND AND NOT USE_PRECOMPILED_LIBS)
         # ffmpeg doesn't try to use pkg-config for lame, as it doesn't include a .pc file
         #set(LAME_PKG_CONFIG_DIR "${install_dir}/lib/pkgconfig")
         set(LAME_EXTRA_CFLAGS "-I${install_dir}/include")
-        set(LAME_EXTRA_LDFLAGS "-L${install_dir}/lib")
+        if (APPLE AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL arm64))
+            set(LAME_EXTRA_LDFLAGS "-L${install_dir}/lib -Wl,-ld_classic")
+        else()
+            set(LAME_EXTRA_LDFLAGS "-L${install_dir}/lib")
+        endif()
         set_global_cache(LAME_FOUND ON)
         set(LAME_EXTERNAL ON CACHE INTERNAL "")
         if (APPLE)
@@ -764,7 +777,7 @@ if (LINUX AND (NOT LIBSIGMF_FOUND OR LIBSIGMF_EXTERNAL))
             GIT_TAG ${LIBSIGMF_TAG}
             PREFIX "${EXTERNAL_BUILD_LIBRARIES}/libsigmf"
             CMAKE_ARGS ${COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-            BUILD_BYPRODUCTS "${LIBSIGMF_LIBRARIES}"            
+            BUILD_BYPRODUCTS "${LIBSIGMF_LIBRARIES}"
             TEST_COMMAND ""
             )
     ExternalProject_Get_Property(libsigmf install_dir)
@@ -1491,7 +1504,7 @@ if (WIN32 OR APPLE)
         endif ()
         ExternalProject_Add(uhd
                 GIT_REPOSITORY https://github.com/EttusResearch/uhd.git
-                GIT_TAG v4.5.0.0
+                GIT_TAG ${UHD_TAG}
                 DEPENDS ${LIBUSB_DEPENDS} ${Boost_DEPENDS}
                 PREFIX "${EXTERNAL_BUILD_LIBRARIES}/uhd"
                 SOURCE_SUBDIR "host"

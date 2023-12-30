@@ -1,6 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
 // written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020, 2022-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com> //
+// Copyright (C) 2016 Ziga S <ziga.svetina@gmail.com>                            //
+// Copyright (C) 2022-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -369,6 +374,13 @@ qint64 AudioOutputDevice::readData(char* data, qint64 maxLen)
 		}
 	}
 
+    // See how much data we have available
+    // If we have less than the requested amount, we only output what we have
+    // If we have no data, then we output some zeros to avoid underflow
+    // (bytesAvailable() returns this amount when none available)
+    unsigned int samplesAvailable = bytesAvailable() / 4;
+    samplesPerBuffer = std::min(samplesAvailable, samplesPerBuffer);
+
 	memset(&m_mixBuffer[0], 0x00, 2 * samplesPerBuffer * sizeof(m_mixBuffer[0])); // start with silence
 
 	// sum up a block from all fifos
@@ -380,10 +392,11 @@ qint64 AudioOutputDevice::readData(char* data, qint64 maxLen)
 		const qint16* src = (const qint16*) data;
 		std::vector<qint32>::iterator dst = m_mixBuffer.begin();
 
-//		if (samples != framesPerBuffer)
-//		{
-//            qDebug("AudioOutputDevice::readData: read %d samples vs %d requested", samples, framesPerBuffer);
-//		}
+        if (samples != samplesPerBuffer)
+        {
+            //qDebug("AudioOutputDevice::readData: read %d samples vs %d requested", samples, samplesPerBuffer);
+            emit (*it)->underflow();
+        }
 
 		for (unsigned int i = 0; i < samples; i++)
 		{
@@ -541,8 +554,11 @@ qint64 AudioOutputDevice::bytesAvailable() const
     // If we return 0 from this twice in a row, audio will stop.
     // So we always return a value, and if we don't have enough data in the FIFOs
     // when readData is called, that will output silence
-    if (available == 0) {
-        available = 2048; // Is there a better value to use?
+    if (available == 0)
+    {
+        // Use a small value, so padding is minimized, but not too small, we get underflow again straightaway
+        // Could make this a function of sample rate
+        available = 512;
     }
     return available * 2 * 2; // 2 Channels of 16-bit data
 }

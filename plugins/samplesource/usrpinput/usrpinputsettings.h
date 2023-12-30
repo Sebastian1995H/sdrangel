@@ -1,6 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 Edouard Griffiths, F4EXB                                   //
-// Copyright (C) 2020 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2020 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -50,6 +52,10 @@ struct USRPInputSettings
     QString  m_clockSource;
     bool     m_transverterMode;
     qint64   m_transverterDeltaFrequency;
+	float    m_replayOffset; //!< Replay offset in seconds
+	float    m_replayLength; //!< Replay buffer size in seconds
+	float    m_replayStep;   //!< Replay forward/back step size in seconds
+	bool     m_replayLoop;   //!< Replay buffer repeatedly without recording new data
     bool     m_useReverseAPI;
     QString  m_reverseAPIAddress;
     uint16_t m_reverseAPIPort;

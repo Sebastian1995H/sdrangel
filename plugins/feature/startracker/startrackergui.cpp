@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
-// Copyright (C) 2020 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2021-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2021-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -408,6 +408,7 @@ StarTrackerGUI::StarTrackerGUI(PluginAPI* pluginAPI, FeatureUISet *featureUISet,
     applySettings(true);
     disconnect(ui->azimuth, SIGNAL(valueChanged(double)), this, SLOT(on_azimuth_valueChanged(double)));
     makeUIConnections();
+    m_resizer.enableChildMouseTracking();
 
     // Populate subchart menu
     on_chartSelect_currentIndexChanged(0);
@@ -1941,7 +1942,7 @@ void StarTrackerGUI::plotElevationPolarChart()
         // Plot rotator position
         QString ourSourceName = QString("F0:%1 %2").arg(m_starTracker->getIndexInFeatureSet()).arg(m_starTracker->getIdentifier());  // Only one feature set in practice?
         std::vector<FeatureSet*>& featureSets = MainCore::instance()->getFeatureeSets();
-        for (int featureSetIndex = 0; featureSetIndex < featureSets.size(); featureSetIndex++)
+        for (int featureSetIndex = 0; featureSetIndex < (int)featureSets.size(); featureSetIndex++)
         {
             FeatureSet *featureSet = featureSets[featureSetIndex];
             for (int featureIndex = 0; featureIndex < featureSet->getNumberOfFeatures(); featureIndex++)
@@ -2278,7 +2279,8 @@ bool StarTrackerGUI::readSolarFlux()
             // HHMMSS 245    410     610    1415   2695   4995   8800  15400   Mhz
             // 000000 000019 000027 000037 000056 000073 000116 000202 000514  sfu
             // Occasionally, file will contain ////// in a column, presumably to indicate no data
-            QRegExp re("([0-9]{2})([0-9]{2})([0-9]{2}) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+) ([0-9\\/]+)");
+            // Values can be negative
+            QRegExp re("([0-9]{2})([0-9]{2})([0-9]{2}) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+) (-?[0-9\\/]+)");
 
             if (re.indexIn(string) != -1)
             {

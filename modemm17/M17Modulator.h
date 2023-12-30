@@ -128,16 +128,12 @@ public:
         std::copy(source_.begin(), source_.end(), rit);
 
         lsf[12] = can_ >> 1;
-        lsf[13] = (streamElsePacket ? 5 : 4) | ((can_ & 1) << 7);
+        lsf[13] = (streamElsePacket ? 5 : 2) | ((can_ & 1) << 7);
 
         if (gnss_on_)
         {
             lsf[13] |= (1<<5);
             std::copy(gnss_.begin(), gnss_.end(), &lsf[14]);
-        }
-        else
-        {
-            lsf[13] |= (3<<5);
         }
 
         crc.reset();
@@ -309,8 +305,8 @@ public:
         if (last_packet)
         {
             packet_assembly[25] = 0x80 | ((packet_size+2)<<2); // sent packet size includes CRC
-            packet_assembly[packet_size]   = crc_.get_bytes()[1];
-            packet_assembly[packet_size+1] = crc_.get_bytes()[0];
+            packet_assembly[packet_size]   = crc_.get_bytes()[0];
+            packet_assembly[packet_size+1] = crc_.get_bytes()[1];
         }
         else
         {

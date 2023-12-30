@@ -63,10 +63,13 @@ set(sdrgui_SOURCES
     gui/graphicsviewzoom.cpp
     gui/httpdownloadmanagergui.cpp
     gui/indicator.cpp
+    gui/int64delegate.cpp
+    gui/int64validator.cpp
     gui/levelmeter.cpp
     gui/loggingdialog.cpp
     gui/logslider.cpp
     gui/loglabelslider.cpp
+    gui/mdiutils.cpp
     gui/mypositiondialog.cpp
     gui/nanosecondsdelegate.cpp
     gui/pluginsdialog.cpp
@@ -185,10 +188,13 @@ set(sdrgui_HEADERS
     gui/graphicsviewzoom.h
     gui/httpdownloadmanagergui.h
     gui/indicator.h
+    gui/int64delegate.h
+    gui/int64validator.h
     gui/levelmeter.h
     gui/loggingdialog.h
     gui/logslider.h
     gui/loglabelslider.h
+    gui/mdiutils.h
     gui/mypositiondialog.h
     gui/nanosecondsdelegate.h
     gui/physicalunit.h

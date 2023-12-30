@@ -1,4 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2018-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2020 Kacper Michajłow <kasper93@gmail.com>                      //
 // Copyright (C) 2018 F4HKW                                                      //
 // for F4EXB / SDRAngel                                                          //
 // using LeanSDR Framework (C) 2016 F4DAV                                        //
@@ -65,6 +67,7 @@ public:
 
     virtual int getNbSinkStreams() const { return 1; }
     virtual int getNbSourceStreams() const { return 0; }
+    virtual int getStreamIndex() const { return m_settings.m_streamIndex; }
     uint32_t getNumberOfDeviceStreams() const;
 
     virtual qint64 getStreamCenterFrequency(int streamIndex, bool sinkElseSource) const

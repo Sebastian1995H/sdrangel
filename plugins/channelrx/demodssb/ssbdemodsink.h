@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2019 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2019-2020, 2022-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com> //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -25,6 +25,7 @@
 #include "dsp/interpolator.h"
 #include "dsp/fftfilt.h"
 #include "dsp/agc.h"
+#include "dsp/firfilter.h"
 #include "audio/audiofifo.h"
 #include "util/doublebufferfifo.h"
 
@@ -110,6 +111,9 @@ private:
     int m_agcThresholdGate;     //!< Gate length in number of samples befor threshold triggers
     DoubleBufferFIFO<fftfilt::cmplx> m_squelchDelayLine;
     bool m_audioActive;         //!< True if an audio signal is produced (no AGC or AGC and above threshold)
+    Lowpass<Real> m_lowpassI;
+    Lowpass<Real> m_lowpassQ;
+
 
 	NCOF m_nco;
     Interpolator m_interpolator;

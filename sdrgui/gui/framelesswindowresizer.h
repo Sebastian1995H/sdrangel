@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2022-2023 Jon Beniston, M7RCE <jon@beniston.com>                //
+// Copyright (C) 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>               //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -30,8 +31,9 @@
 // and leaveEvent events to this class
 // Child widgets should have mouse tracking enabled, so cursor can be controlled properly
 // This can be achieved by calling enableChildMouseTracking
-class SDRGUI_API FramelessWindowResizer
+class SDRGUI_API FramelessWindowResizer : public QObject
 {
+    Q_OBJECT
 private:
     QWidget *m_widget;        // Widget to be resized
     bool m_vResizing;         // Whether we are resizing vertically
@@ -60,6 +62,7 @@ public:
     const int m_gripSize = 2;   // Size in pixels of the border of the window that can be clicked in to resize it
 
 protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
     bool mouseOnTopBorder(QPoint pos) const;
     bool mouseOnBottomBorder(QPoint pos) const;
     bool mouseOnLeftBorder(QPoint pos) const;
@@ -67,7 +70,6 @@ protected:
     bool mouseOnBorder(QPoint pos) const;
     void setCursor(const QCursor &cursor);
     void clearCursor();
-
 };
 
 #endif // SDRGUI_FRAMELESSWINDOWRESIZER_H_

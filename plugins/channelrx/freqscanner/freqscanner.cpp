@@ -1,6 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015-2018 Edouard Griffiths, F4EXB.                             //
-// Copyright (C) 2023 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -24,7 +23,6 @@
 #include <QNetworkReply>
 #include <QBuffer>
 #include <QThread>
-#include <QRegExp>
 
 #include <stdio.h>
 #include <complex.h>
@@ -37,7 +35,8 @@
 #include "device/deviceset.h"
 #include "dsp/dspengine.h"
 #include "dsp/dspcommands.h"
-#include "dsp/morsedemod.h"
+#include "dsp/devicesamplesource.h"
+#include "dsp/devicesamplemimo.h"
 #include "device/deviceapi.h"
 #include "feature/feature.h"
 #include "settings/serializable.h"
@@ -68,8 +67,8 @@ FreqScanner::FreqScanner(DeviceAPI *deviceAPI) :
         m_basebandSink(nullptr),
         m_running(false),
         m_basebandSampleRate(0),
-        m_scanDeviceSetIndex(-1),
-        m_scanChannelIndex(-1),
+        m_scanDeviceSetIndex(0),
+        m_scanChannelIndex(0),
         m_state(IDLE),
         m_timeoutTimer(this)
 {
@@ -250,6 +249,7 @@ bool FreqScanner::handleMessage(const Message& cmd)
     }
     else if (MsgStartScan::match(cmd))
     {
+        muteAll(m_settings);
         startScan();
 
         return true;
@@ -294,15 +294,25 @@ void FreqScanner::stopScan()
 
 void FreqScanner::setDeviceCenterFrequency(qint64 frequency)
 {
-    // For RTL SDR, ChannelWebAPIUtils::setCenterFrequency takes ~50ms, which means tuneTime can be 0
-    if (!ChannelWebAPIUtils::setCenterFrequency(getDeviceSetIndex(), frequency)) {
-        qWarning() << "Freq Scanner failed to set frequency" << frequency;
+    DSPDeviceSourceEngine* deviceSourceEngine = getDeviceAPI()->getDeviceSourceEngine();
+    DSPDeviceMIMOEngine *deviceMIMOEngine = getDeviceAPI()->getDeviceMIMOEngine();
+
+    if (deviceSourceEngine) // Rx device
+    {
+        // For RTL SDR, setCenterFrequency takes ~50ms, which means tuneTime can be 0
+        getDeviceAPI()->getSampleSource()->setCenterFrequency(frequency);
+    } else if (deviceMIMOEngine) { // MIMO device - I/Q stream is the same as this channel
+        getDeviceAPI()->getSampleMIMO()->setSourceCenterFrequency(frequency, m_settings.m_streamIndex);
     }
+
     m_minFFTStartTime = QDateTime::currentDateTime().addMSecs(m_settings.m_tuneTime);
 }
 
 void FreqScanner::initScan()
 {
+    // if (m_scanChannelIndex < 0) { // Always false
+    //     applyChannelSetting(m_settings.m_channel);
+    // }
     ChannelWebAPIUtils::setAudioMute(m_scanDeviceSetIndex, m_scanChannelIndex, true);
 
     if (m_centerFrequency != m_stepStartFrequency) {
@@ -320,7 +330,6 @@ void FreqScanner::initScan()
 
 void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<MsgScanResult::ScanResult>& results)
 {
-
     switch (m_state)
     {
     case IDLE:
@@ -330,10 +339,10 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
         {
             // Create ordered list of frequencies to scan
             QList<qint64> frequencies;
-            for (int i = 0; i < m_settings.m_frequencies.size(); i++)
+            for (int i = 0; i < m_settings.m_frequencySettings.size(); i++)
             {
-                if (m_settings.m_enabled[i]) {
-                    frequencies.append(m_settings.m_frequencies[i]);
+                if (m_settings.m_frequencySettings[i].m_enabled) {
+                    frequencies.append(m_settings.m_frequencySettings[i].m_frequency);
                 }
             }
             std::sort(frequencies.begin(), frequencies.end());
@@ -391,11 +400,11 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
                 }
 
                 // Are any frequencies in this new range?
-                for (int i = 0; i < m_settings.m_frequencies.size(); i++)
+                for (int i = 0; i < m_settings.m_frequencySettings.size(); i++)
                 {
-                    if (m_settings.m_enabled[i]
-                        && (m_settings.m_frequencies[i] >= nextCenterFrequency - usableBW / 2)
-                        && (m_settings.m_frequencies[i] < nextCenterFrequency + usableBW / 2))
+                    if (m_settings.m_frequencySettings[i].m_enabled
+                        && (m_settings.m_frequencySettings[i].m_frequency >= nextCenterFrequency - usableBW / 2)
+                        && (m_settings.m_frequencySettings[i].m_frequency < nextCenterFrequency + usableBW / 2))
                     {
                         freqInRange = true;
                         break;
@@ -417,51 +426,52 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
                         m_guiMessageQueue->push(msg);
                     }
 
-                    int frequency = m_scanResults[0].m_frequency;
-                    Real maxPower = m_scanResults[0].m_power;
+                    int frequency = -1;
+                    FreqScannerSettings::FrequencySettings *frequencySettings = nullptr;
+                    FreqScannerSettings::FrequencySettings *activeFrequencySettings = nullptr;
 
                     if (m_settings.m_priority == FreqScannerSettings::MAX_POWER)
                     {
-                        // Find frequency with max power
-                        for (int i = 1; i < m_scanResults.size(); i++)
+                        Real maxPower = -200.0f;
+
+                        // Find frequency with max power that exceeds thresholds
+                        for (int i = 0; i < m_scanResults.size(); i++)
                         {
-                            if (m_scanResults[i].m_power > maxPower)
+                            frequencySettings = m_settings.getFrequencySettings(m_scanResults[i].m_frequency);
+                            Real threshold = m_settings.getThreshold(frequencySettings);
+                            if (m_scanResults[i].m_power >= threshold)
                             {
-                                frequency = m_scanResults[i].m_frequency;
-                                maxPower = m_scanResults[i].m_power;
+                                if (!activeFrequencySettings || (m_scanResults[i].m_power > maxPower))
+                                {
+                                    frequency = m_scanResults[i].m_frequency;
+                                    maxPower = m_scanResults[i].m_power;
+                                    activeFrequencySettings = frequencySettings;
+                                }
                             }
                         }
                     }
                     else
                     {
                         // Find first frequency in list above threshold
-                        for (int j = 0; j < m_settings.m_frequencies.size(); j++)
+                        for (int i = 0; i < m_scanResults.size(); i++)
                         {
-                            for (int i = 0; i < m_scanResults.size(); i++)
+                            frequencySettings = m_settings.getFrequencySettings(m_scanResults[i].m_frequency);
+                            Real threshold = m_settings.getThreshold(frequencySettings);
+                            if (m_scanResults[i].m_power >= threshold)
                             {
-                                if (m_scanResults[i].m_frequency == m_settings.m_frequencies[j])
-                                {
-                                    if (m_scanResults[i].m_power >= m_settings.m_threshold)
-                                    {
-                                        frequency = m_scanResults[i].m_frequency;
-                                        maxPower = m_scanResults[i].m_power;
-                                        goto found_freq;
-                                    }
-                                }
+                                frequency = m_scanResults[i].m_frequency;
+                                activeFrequencySettings = frequencySettings;
+                                break;
                             }
                         }
-                        found_freq: ;
                     }
 
                     if (m_settings.m_mode != FreqScannerSettings::SCAN_ONLY)
                     {
-                        // Is power above threshold
-                        if (maxPower >= m_settings.m_threshold)
+                        // Were any frequencies found to be active?
+                        //if (maxPower >= m_settings.m_threshold)
+                        if (activeFrequencySettings)
                         {
-                            if (m_guiMessageQueue) {
-                                m_guiMessageQueue->push(MsgReportActiveFrequency::create(frequency));
-                            }
-
                             // Tune device/channel to frequency
                             int offset;
                             if ((frequency < m_centerFrequency - usableBW / 2) || (frequency >= m_centerFrequency + usableBW / 2))
@@ -495,10 +505,27 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
 
                             //qDebug() << "Tuning to active freq:" << frequency << "m_centerFrequency" << m_centerFrequency << "nextCenterFrequency" << nextCenterFrequency << "offset: " << offset << "deviceset: R" << m_scanDeviceSetIndex << ":" << m_scanChannelIndex;
 
+                            QString channel = m_settings.m_channel;
+                            if (!activeFrequencySettings->m_channel.isEmpty()) {
+                                channel = activeFrequencySettings->m_channel;
+                            }
+                            applyChannelSetting(channel);
+
+                            // Tune the channel
                             ChannelWebAPIUtils::setFrequencyOffset(m_scanDeviceSetIndex, m_scanChannelIndex, offset);
 
                             // Unmute the channel
                             ChannelWebAPIUtils::setAudioMute(m_scanDeviceSetIndex, m_scanChannelIndex, false);
+
+                            // Apply squelch
+                            if (!activeFrequencySettings->m_squelch.isEmpty())
+                            {
+                                bool ok;
+                                Real squelch = activeFrequencySettings->m_squelch.toFloat(&ok);
+                                if (ok) {
+                                    ChannelWebAPIUtils::patchChannelSetting(m_scanDeviceSetIndex, m_scanChannelIndex, "squelch", squelch);
+                                }
+                            }
 
                             m_activeFrequency = frequency;
 
@@ -515,11 +542,16 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
                                 // Wait for transmission to finish
                                 m_state = WAIT_FOR_END_TX;
                             }
+
+                            // Becareful to only do this at the end here, as it can recursively call handleMessage with new settings
+                            if (m_guiMessageQueue) {
+                                m_guiMessageQueue->push(MsgReportActiveFrequency::create(m_activeFrequency));
+                            }
                         }
                         else
                         {
                             if (m_guiMessageQueue) {
-                                m_guiMessageQueue->push(MsgStatus::create(QString("Scanning: No active channels - Max power %1 dB").arg(maxPower, 0, 'f', 1)));
+                                m_guiMessageQueue->push(MsgStatus::create("Scanning..."));
                             }
                         }
                     }
@@ -546,7 +578,9 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
                 }
 
                 // Wait until power drops below threshold
-                if (results[i].m_power < m_settings.m_threshold)
+                FreqScannerSettings::FrequencySettings *frequencySettings = m_settings.getFrequencySettings(m_activeFrequency);
+                Real threshold = m_settings.getThreshold(frequencySettings);
+                if (results[i].m_power < threshold)
                 {
                     m_timeoutTimer.setSingleShot(true);
                     m_timeoutTimer.start((int)(m_settings.m_retransmitTime * 1000.0));
@@ -567,7 +601,9 @@ void FreqScanner::processScanResults(const QDateTime& fftStartTime, const QList<
                 }
 
                 // Check if power has returned to being above threshold
-                if (results[i].m_power >= m_settings.m_threshold)
+                FreqScannerSettings::FrequencySettings *frequencySettings = m_settings.getFrequencySettings(m_activeFrequency);
+                Real threshold = m_settings.getThreshold(frequencySettings);
+                if (results[i].m_power >= threshold)
                 {
                     m_timeoutTimer.stop();
                     m_state = WAIT_FOR_END_TX;
@@ -599,6 +635,9 @@ void FreqScanner::calcScannerSampleRate(int channelBW, int basebandSampleRate, i
     // But ensure we have several bins per channel
     // Adjust sample rate, to ensure we don't get massive FFT size
     scannerSampleRate = basebandSampleRate;
+    if (scannerSampleRate < channelBW) {
+        channelBW = scannerSampleRate; // Prevent divide by 0
+    }
     while (fftSize / (scannerSampleRate / channelBW) < minBinsPerChannel)
     {
         if (fftSize == maxFFTSize) {
@@ -624,6 +663,37 @@ void FreqScanner::setCenterFrequency(qint64 frequency)
     }
 }
 
+// Mute all channels
+void FreqScanner::muteAll(const FreqScannerSettings& settings)
+{
+    QStringList channels;
+
+    channels.append(settings.m_channel);
+    for (int i = 0; i < settings.m_frequencySettings.size(); i++)
+    {
+        QString channel = settings.m_frequencySettings[i].m_channel;
+        if (!channel.isEmpty() && !channels.contains(channel)) {
+            channels.append(channel);
+        }
+    }
+
+    for (const auto& channel : channels)
+    {
+        unsigned int deviceSetIndex, channelIndex;
+
+        if (MainCore::getDeviceAndChannelIndexFromId(channel, deviceSetIndex, channelIndex)) {
+            ChannelWebAPIUtils::setAudioMute(deviceSetIndex, channelIndex, true);
+        }
+    }
+}
+
+void FreqScanner::applyChannelSetting(const QString& channel)
+{
+    if (!MainCore::getDeviceAndChannelIndexFromId(channel, m_scanDeviceSetIndex, m_scanChannelIndex)) {
+        qDebug() << "FreqScanner::applySettings: Failed to parse channel" << channel;
+    }
+}
+
 void FreqScanner::applySettings(const FreqScannerSettings& settings, const QStringList& settingsKeys, bool force)
 {
     qDebug() << "FreqScanner::applySettings:"
@@ -638,20 +708,8 @@ void FreqScanner::applySettings(const FreqScannerSettings& settings, const QStri
             m_deviceAPI->removeChannelSink(this, m_settings.m_streamIndex);
             m_deviceAPI->addChannelSink(this, settings.m_streamIndex);
             m_deviceAPI->addChannelSinkAPI(this);
-        }
-    }
-
-    if (settingsKeys.contains("channel") || force)
-    {
-        const QRegExp re("R([0-9]+):([0-9]+)");
-        if (re.indexIn(settings.m_channel) >= 0)
-        {
-            m_scanDeviceSetIndex = re.capturedTexts()[1].toInt();
-            m_scanChannelIndex = re.capturedTexts()[2].toInt();
-        }
-        else
-        {
-            qDebug() << "FreqScanner::applySettings: Failed to parse channel" << settings.m_channel;
+            scanAvailableChannels(); // re-scan
+            emit streamIndexChanged(settings.m_streamIndex);
         }
     }
 
@@ -671,7 +729,7 @@ void FreqScanner::applySettings(const FreqScannerSettings& settings, const QStri
         webapiReverseSendSettings(settingsKeys, settings, fullUpdate || force);
     }
 
-    if (settingsKeys.contains("frequencies")
+    if (settingsKeys.contains("frequencySettings")
         || settingsKeys.contains("priority")
         || settingsKeys.contains("measurement")
         || settingsKeys.contains("mode")
@@ -785,21 +843,30 @@ void FreqScanner::webapiUpdateChannelSettings(
     }
     if (channelSettingsKeys.contains("frequencies"))
     {
-        settings.m_frequencies.clear();
-        settings.m_enabled.clear();
-        settings.m_notes.clear();
+        settings.m_frequencySettings.clear();
         QList<SWGSDRangel::SWGFreqScannerFrequency *> *frequencies = response.getFreqScannerSettings()->getFrequencies();
         if (frequencies)
         {
             for (const auto frequency : *frequencies)
             {
-                settings.m_frequencies.append(frequency->getFrequency());
-                settings.m_enabled.append((bool)frequency->getEnabled());
+                FreqScannerSettings::FrequencySettings freqSetting;
+                freqSetting.m_frequency = frequency->getFrequency();
                 if (frequency->getNotes()) {
-                    settings.m_notes.append(*frequency->getNotes());
-                } else {
-                    settings.m_notes.append("");
+                    freqSetting.m_notes = *frequency->getNotes();
                 }
+                if (frequency->getChannel()) {
+                    freqSetting.m_channel = *frequency->getChannel();
+                }
+                if (frequency->getChannelBandwidth()) {
+                    freqSetting.m_channelBandwidth = *frequency->getChannelBandwidth();
+                }
+                if (frequency->getThreshold()) {
+                    freqSetting.m_threshold = *frequency->getThreshold();
+                }
+                if (frequency->getSquelch()) {
+                    freqSetting.m_squelch = *frequency->getSquelch();
+                }
+                settings.m_frequencySettings.append(freqSetting);
             }
         }
     }
@@ -838,14 +905,26 @@ void FreqScanner::webapiUpdateChannelSettings(
 QList<SWGSDRangel::SWGFreqScannerFrequency *> *FreqScanner::createFrequencyList(const FreqScannerSettings& settings)
 {
     QList<SWGSDRangel::SWGFreqScannerFrequency *> *frequencies = new QList<SWGSDRangel::SWGFreqScannerFrequency *>();
-    for (int i = 0; i < settings.m_frequencies.size(); i++)
+    for (int i = 0; i < settings.m_frequencySettings.size(); i++)
     {
         SWGSDRangel::SWGFreqScannerFrequency *frequency = new SWGSDRangel::SWGFreqScannerFrequency();
         frequency->init();
-        frequency->setFrequency(settings.m_frequencies[i]);
-        frequency->setEnabled(settings.m_enabled[i]);
-        if (!settings.m_notes[i].isEmpty()) {
-            frequency->setNotes(new QString(settings.m_notes[i]));
+        frequency->setFrequency(settings.m_frequencySettings[i].m_frequency);
+        frequency->setEnabled(settings.m_frequencySettings[i].m_enabled);
+        if (!settings.m_frequencySettings[i].m_notes.isEmpty()) {
+            frequency->setNotes(new QString(settings.m_frequencySettings[i].m_notes));
+        }
+        if (!settings.m_frequencySettings[i].m_channel.isEmpty()) {
+            frequency->setChannel(new QString(settings.m_frequencySettings[i].m_channel));
+        }
+        if (!settings.m_frequencySettings[i].m_channelBandwidth.isEmpty()) {
+            frequency->setChannelBandwidth(new QString(settings.m_frequencySettings[i].m_channelBandwidth));
+        }
+        if (!settings.m_frequencySettings[i].m_threshold.isEmpty()) {
+            frequency->setThreshold(new QString(settings.m_frequencySettings[i].m_threshold));
+        }
+        if (!settings.m_frequencySettings[i].m_squelch.isEmpty()) {
+            frequency->setSquelch(new QString(settings.m_frequencySettings[i].m_squelch));
         }
         frequencies->append(frequency);
     }
@@ -1039,23 +1118,68 @@ void FreqScanner::handleIndexInDeviceSetChanged(int index)
 
 void FreqScanner::scanAvailableChannels()
 {
-    MainCore* mainCore = MainCore::instance();
-    std::vector<DeviceSet*>& deviceSets = mainCore->getDeviceSets();
     m_availableChannels.clear();
 
-    for (const auto& deviceSet : deviceSets)
+    DSPDeviceSourceEngine* deviceSourceEngine = getDeviceAPI()->getDeviceSourceEngine();
+
+    if (deviceSourceEngine)
     {
-        DSPDeviceSourceEngine* deviceSourceEngine = deviceSet->m_deviceSourceEngine;
-
-        if (deviceSourceEngine)
+        for (int chi = 0; chi < getDeviceAPI()->getNbSinkChannels(); chi++) // Rx channels
         {
-            for (int chi = 0; chi < deviceSet->getNumberOfChannels(); chi++)
-            {
-                ChannelAPI* channel = deviceSet->getChannelAt(chi);
+            ChannelAPI* channel = getDeviceAPI()->getChanelSinkAPIAt(chi);
 
+            if (channel->getIndexInDeviceSet() == getIndexInDeviceSet()) { // Exclude oneself
+                continue;
+            }
+
+            FreqScannerSettings::AvailableChannel availableChannel =
+                FreqScannerSettings::AvailableChannel{
+                    channel->getDeviceSetIndex(),
+                    channel->getIndexInDeviceSet(),
+                    -1
+                };
+            m_availableChannels[channel] = availableChannel;
+            QObject::connect(
+                channel,
+                &ChannelAPI::streamIndexChanged,
+                [=](int streamIndex){
+                    this->handleChannelStreamIndexChanged(streamIndex, channel);
+                }
+            );
+        }
+    }
+
+    DSPDeviceMIMOEngine *deviceMIMOEngine = getDeviceAPI()->getDeviceMIMOEngine();
+
+    if (deviceMIMOEngine)
+    {
+        for (int chi = 0; chi < getDeviceAPI()->getNbSinkChannels(); chi++) // Rx channels
+        {
+            ChannelAPI* channel = getDeviceAPI()->getChanelSinkAPIAt(chi);
+
+            if (channel->getIndexInDeviceSet() == getIndexInDeviceSet()) { // Exclude oneself
+                continue;
+            }
+
+            // Single Rx on the same I/Q stream
+            if ((channel->getNbSinkStreams() == 1)
+                && (channel->getNbSourceStreams() == 0)
+                && (channel->getStreamIndex() == m_settings.m_streamIndex))
+            {
                 FreqScannerSettings::AvailableChannel availableChannel =
-                    FreqScannerSettings::AvailableChannel{ channel->getDeviceSetIndex(), channel->getIndexInDeviceSet()};
+                    FreqScannerSettings::AvailableChannel{
+                        channel->getDeviceSetIndex(),
+                        channel->getIndexInDeviceSet(),
+                        channel->getStreamIndex()
+                    };
                 m_availableChannels[channel] = availableChannel;
+                QObject::connect(
+                    channel,
+                    &ChannelAPI::streamIndexChanged,
+                    [=](int streamIndex){
+                        this->handleChannelStreamIndexChanged(streamIndex, channel);
+                    }
+                );
             }
         }
     }
@@ -1065,17 +1189,49 @@ void FreqScanner::scanAvailableChannels()
 
 void FreqScanner::handleChannelAdded(int deviceSetIndex, ChannelAPI* channel)
 {
+    if (deviceSetIndex != getDeviceSetIndex()) { // Can control channels only in the same device set
+        return;
+    }
+
     qDebug("FreqScanner::handleChannelAdded: deviceSetIndex: %d:%d channel: %s (%p)",
         deviceSetIndex, channel->getIndexInDeviceSet(), qPrintable(channel->getURI()), channel);
-    std::vector<DeviceSet*>& deviceSets = MainCore::instance()->getDeviceSets();
-    DeviceSet* deviceSet = deviceSets[deviceSetIndex];
-    DSPDeviceSourceEngine* deviceSourceEngine = deviceSet->m_deviceSourceEngine;
+    DSPDeviceSourceEngine* deviceSourceEngine = getDeviceAPI()->getDeviceSourceEngine();
 
     if (deviceSourceEngine)
     {
         FreqScannerSettings::AvailableChannel availableChannel =
-            FreqScannerSettings::AvailableChannel{ deviceSetIndex, channel->getIndexInDeviceSet()};
+            FreqScannerSettings::AvailableChannel{ deviceSetIndex, channel->getIndexInDeviceSet(), -1};
         m_availableChannels[channel] = availableChannel;
+        QObject::connect(
+            channel,
+            &ChannelAPI::streamIndexChanged,
+            [=](int streamIndex){
+                this->handleChannelStreamIndexChanged(streamIndex, channel);
+            }
+        );
+    }
+
+    DSPDeviceMIMOEngine *deviceMIMOEngine = getDeviceAPI()->getDeviceMIMOEngine();
+
+    if (deviceMIMOEngine
+        && (channel->getNbSinkStreams() == 1)
+        && (channel->getNbSourceStreams() == 0)
+        && (channel->getStreamIndex() == m_settings.m_streamIndex))
+    {
+        FreqScannerSettings::AvailableChannel availableChannel =
+            FreqScannerSettings::AvailableChannel{
+                deviceSetIndex,
+                channel->getIndexInDeviceSet(),
+                channel->getStreamIndex()
+            };
+        m_availableChannels[channel] = availableChannel;
+        QObject::connect(
+            channel,
+            &ChannelAPI::streamIndexChanged,
+            [=](int streamIndex){
+                this->handleChannelStreamIndexChanged(streamIndex, channel);
+            }
+        );
     }
 
     notifyUpdateChannels();
@@ -1083,17 +1239,42 @@ void FreqScanner::handleChannelAdded(int deviceSetIndex, ChannelAPI* channel)
 
 void FreqScanner::handleChannelRemoved(int deviceSetIndex, ChannelAPI* channel)
 {
+    if (deviceSetIndex != getDeviceSetIndex()) { // Can control channels only in the same device set
+        return;
+    }
+
     qDebug("FreqScanner::handleChannelRemoved: deviceSetIndex: %d:%d channel: %s (%p)",
         deviceSetIndex, channel->getIndexInDeviceSet(), qPrintable(channel->getURI()), channel);
-    std::vector<DeviceSet*>& deviceSets = MainCore::instance()->getDeviceSets();
-    DeviceSet* deviceSet = deviceSets[deviceSetIndex];
-    DSPDeviceSourceEngine* deviceSourceEngine = deviceSet->m_deviceSourceEngine;
+    DSPDeviceSourceEngine* deviceSourceEngine = getDeviceAPI()->getDeviceSourceEngine();
+    DSPDeviceMIMOEngine *deviceMIMOEngine = getDeviceAPI()->getDeviceMIMOEngine();
 
-    if (deviceSourceEngine) {
+    if (deviceSourceEngine || deviceMIMOEngine) {
         m_availableChannels.remove(channel);
     }
 
     notifyUpdateChannels();
+}
+
+void FreqScanner::handleChannelStreamIndexChanged(int streamIndex, ChannelAPI* channel)
+{
+    qDebug("FreqScanner::handleChannelStreamIndexChanged: channel:  %s (%p) stream: %d",
+        qPrintable(channel->getURI()), channel, streamIndex);
+    if (streamIndex != m_settings.m_streamIndex) // channel has moved to another I/Q stream
+    {
+        m_availableChannels.remove(channel);
+        notifyUpdateChannels();
+    }
+    else if (!m_availableChannels.contains(channel)) // if channel has been tracked before put back it in the list
+    {
+        FreqScannerSettings::AvailableChannel availableChannel =
+            FreqScannerSettings::AvailableChannel{
+                getDeviceSetIndex(),
+                channel->getIndexInDeviceSet(),
+                channel->getStreamIndex()
+            };
+        m_availableChannels[channel] = availableChannel;
+        notifyUpdateChannels();
+    }
 }
 
 void FreqScanner::notifyUpdateChannels()
@@ -1109,8 +1290,9 @@ void FreqScanner::notifyUpdateChannels()
             FreqScannerSettings::AvailableChannel msgChannel =
                 FreqScannerSettings::AvailableChannel{
                     it->m_deviceSetIndex,
-                    it->m_channelIndex
-            };
+                    it->m_channelIndex,
+                    it->m_streamIndex
+                };
             msgChannels.push_back(msgChannel);
         }
 

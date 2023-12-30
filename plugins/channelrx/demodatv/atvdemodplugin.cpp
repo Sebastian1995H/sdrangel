@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 F4HKW                                                      //
+// Copyright (C) 2016-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
 // for F4EXB / SDRAngel                                                          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
@@ -30,7 +30,7 @@ const PluginDescriptor ATVDemodPlugin::m_ptrPluginDescriptor =
 {
     ATVDemod::m_channelId,
 	QStringLiteral("ATV Demodulator"),
-    QStringLiteral("7.0.0"),
+    QStringLiteral("7.17.1"),
     QStringLiteral("(c) F4HKW for F4EXB / SDRAngel"),
 	QStringLiteral("https://github.com/f4exb/sdrangel"),
 	true,

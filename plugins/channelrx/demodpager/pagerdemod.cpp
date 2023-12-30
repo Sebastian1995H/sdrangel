@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015-2018 Edouard Griffiths, F4EXB.                             //
-// Copyright (C) 2021 Jon Beniston, M7RCE                                        //
+// Copyright (C) 2021, 2023 Jon Beniston, M7RCE <jon@beniston.com>               //
+// Copyright (C) 2021-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -179,11 +179,18 @@ bool PagerDemod::handleMessage(const Message& cmd)
         if (m_settings.m_udpEnabled)
         {
             QByteArray message;
-            message.append(report.getDateTime().toString().toLatin1());
-            message.append(QString::number(report.getAddress()).toLatin1());
+            message.append(report.getDateTime().date().toString().toLatin1());
+            message.append('\0');
+            message.append(report.getDateTime().time().toString().toLatin1());
+            message.append('\0');
+            message.append(QString("%1").arg(report.getAddress(), 7, 10, QChar('0')).toLatin1());
+            message.append('\0');
             message.append(QString::number(report.getFunctionBits()).toLatin1());
+            message.append('\0');
             message.append(report.getAlphaMessage().toLatin1());
+            message.append('\0');
             message.append(report.getNumericMessage().toLatin1());
+            message.append('\0');
             m_udpSocket.writeDatagram(message.data(), message.size(),
                                 QHostAddress(m_settings.m_udpAddress), m_settings.m_udpPort);
         }
@@ -291,6 +298,8 @@ void PagerDemod::applySettings(const PagerDemodSettings& settings, bool force)
             m_deviceAPI->removeChannelSink(this, m_settings.m_streamIndex);
             m_deviceAPI->addChannelSink(this, settings.m_streamIndex);
             m_deviceAPI->addChannelSinkAPI(this);
+            m_settings.m_streamIndex = settings.m_streamIndex; // make sure ChannelAPI::getStreamIndex() is consistent
+            emit streamIndexChanged(settings.m_streamIndex);
         }
 
         reverseAPIKeys.append("streamIndex");

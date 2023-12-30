@@ -386,6 +386,7 @@ public:
 
     virtual int getNbSinkStreams() const { return 1; }
     virtual int getNbSourceStreams() const { return 0; }
+    virtual int getStreamIndex() const { return m_settings.m_streamIndex; }
 
     virtual qint64 getStreamCenterFrequency(int streamIndex, bool sinkElseSource) const
     {
@@ -454,10 +455,10 @@ private:
     QNetworkAccessManager *m_networkManager;
     QNetworkRequest m_networkRequest;
 
-    int m_starTrackerFeatureSetIndex;
-    int m_starTrackerFeatureIndex;
-    int m_rotatorFeatureSetIndex;
-    int m_rotatorFeatureIndex;
+    unsigned int m_starTrackerFeatureSetIndex;
+    unsigned int m_starTrackerFeatureIndex;
+    unsigned int m_rotatorFeatureSetIndex;
+    unsigned int m_rotatorFeatureIndex;
 
     float m_sweep1;     // Current sweep position
     float m_sweep2;

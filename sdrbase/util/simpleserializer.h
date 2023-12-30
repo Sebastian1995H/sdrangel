@@ -1,3 +1,22 @@
+///////////////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany     //
+// written by Christian Daniel                                                       //
+// Copyright (C) 2015-2016, 2018-2019 Edouard Griffiths, F4EXB <f4exb06@gmail.com>   //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                         //
+//                                                                                   //
+// This program is free software; you can redistribute it and/or modify              //
+// it under the terms of the GNU General Public License as published by              //
+// the Free Software Foundation as version 3 of the License, or                      //
+// (at your option) any later version.                                               //
+//                                                                                   //
+// This program is distributed in the hope that it will be useful,                   //
+// but WITHOUT ANY WARRANTY; without even the implied warranty of                    //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                      //
+// GNU General Public License V3 for more details.                                   //
+//                                                                                   //
+// You should have received a copy of the GNU General Public License                 //
+// along with this program. If not, see <http://www.gnu.org/licenses/>.              //
+///////////////////////////////////////////////////////////////////////////////////////
 #ifndef INCLUDE_SIMPLESERIALIZER_H
 #define INCLUDE_SIMPLESERIALIZER_H
 
@@ -86,7 +105,7 @@ public:
 	bool readBlob(quint32 id, QByteArray* result, const QByteArray& def = QByteArray()) const;
 
 	template<typename T>
-	bool readList(quint32 id, QList<T>* result)
+	bool readList(quint32 id, QList<T>* result, const QList<T>& def = {})
 	{
 		QByteArray data;
 		bool ok = readBlob(id, &data);
@@ -96,10 +115,14 @@ public:
 			(*stream) >> *result;
 			delete stream;
 		}
+		else
+		{
+			*result = def;
+		}
 		return ok;
 	}
 	template<typename TK, typename TV>
-	bool readHash(quint32 id, QHash<TK,TV>* result)
+	bool readHash(quint32 id, QHash<TK,TV>* result, const QHash<TK,TV>& def = {})
 	{
 		QByteArray data;
 		bool ok = readBlob(id, &data);
@@ -108,6 +131,10 @@ public:
 			QDataStream *stream = new QDataStream(data);
 			(*stream) >> *result;
 			delete stream;
+		}
+		else
+		{
+			*result = def;
 		}
 		return ok;
 	}

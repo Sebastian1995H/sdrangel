@@ -1,9 +1,19 @@
-/*
- * kissagc.h
- *
- *  Created on: May 12, 2015
- *      Author: f4exb
- */
+///////////////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2015-2019 Edouard Griffiths, F4EXB <f4exb06@gmail.com>              //
+//                                                                                   //
+// This program is free software; you can redistribute it and/or modify              //
+// it under the terms of the GNU General Public License as published by              //
+// the Free Software Foundation as version 3 of the License, or                      //
+// (at your option) any later version.                                               //
+//                                                                                   //
+// This program is distributed in the hope that it will be useful,                   //
+// but WITHOUT ANY WARRANTY; without even the implied warranty of                    //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                      //
+// GNU General Public License V3 for more details.                                   //
+//                                                                                   //
+// You should have received a copy of the GNU General Public License                 //
+// along with this program. If not, see <http://www.gnu.org/licenses/>.              //
+///////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef INCLUDE_GPL_DSP_AGC_H_
 #define INCLUDE_GPL_DSP_AGC_H_
@@ -22,13 +32,14 @@ public:
 	void setOrder(double R) { m_R = R; }
 	Real getValue();
 	Real getAverage();
+    void reset(double R) { m_moving_average.fill(R); }
 	virtual void feed(Complex& ci) = 0;
 
 protected:
 	double m_u0;                            //!< AGC factor
 	double m_R;                             //!< ordered magnitude
 	MovingAverage<double> m_moving_average; //!< Averaging engine. The stack length conditions the smoothness of AGC.
-	int m_historySize;                      //!< Averaging length (attack)
+	int m_historySize;                      //!< Averaging length (the longer the slower the AGC)
 	int m_count;                            //!< Samples counter
 };
 
@@ -48,11 +59,10 @@ public:
     void setThresholdEnable(bool enable);
     void setGate(int gate) { m_gate = gate; m_gateCounter = 0; m_count = 0; }
     void setStepDownDelay(int stepDownDelay) { m_stepDownDelay = stepDownDelay; m_gateCounter = 0; m_count = 0; }
-    void setClamping(bool clamping) { m_clamping = clamping; }
-    void setClampMax(double clampMax) { m_clampMax = clampMax; }
     int getStepDownDelay() const { return m_stepDownDelay; }
     float getStepValue() const;
     void setHardLimiting(bool hardLimiting) { m_hardLimiting = hardLimiting; }
+    void resetStepCounters() { m_stepUpCounter = 0; m_stepDownCounter = 0; }
 
 private:
     bool m_squared;        //!< use squared magnitude (power) to compute AGC value
@@ -66,9 +76,6 @@ private:
     int m_stepDownCounter; //!< step down transition samples counter
     int m_gateCounter;     //!< threshold gate samples counter
     int m_stepDownDelay;   //!< delay in samples before cutoff (release)
-    bool m_clamping;       //!< clamping active
-    double m_R2;           //!< square of ordered magnitude
-    double m_clampMax;     //!< maximum to clamp to as power value
     bool m_hardLimiting;   //!< hard limit multiplier so that resulting sample magnitude does not exceed 1.0
 
     double hardLimiter(double multiplier, double magsq);

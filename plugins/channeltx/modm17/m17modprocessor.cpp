@@ -1,5 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>               //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -60,6 +61,7 @@ bool M17ModProcessor::handleMessage(const Message& cmd)
         const MsgSendSMS& notif = (const MsgSendSMS&) cmd;
         QByteArray packetBytes = notif.getSMSText().toUtf8();
         packetBytes.prepend(0x05); // SMS standard type
+        packetBytes.append('\0'); // SMS should be null terminated
         packetBytes.truncate(798); // Maximum packet size is 798 payload + 2 bytes CRC = 800 bytes (32*25)
         processPacket(notif.getSourceCall(), notif.getDestCall(), notif.getCAN(), packetBytes);
         // test(notif.getSourceCall(), notif.getDestCall());

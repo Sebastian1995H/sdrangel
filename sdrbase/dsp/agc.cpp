@@ -1,9 +1,19 @@
-/*
- * agc.cpp
- *
- *  Created on: Sep 7, 2015
- *      Author: f4exb
- */
+///////////////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2015-2019 Edouard Griffiths, F4EXB <f4exb06@gmail.com>              //
+//                                                                                   //
+// This program is free software; you can redistribute it and/or modify              //
+// it under the terms of the GNU General Public License as published by              //
+// the Free Software Foundation as version 3 of the License, or                      //
+// (at your option) any later version.                                               //
+//                                                                                   //
+// This program is distributed in the hope that it will be useful,                   //
+// but WITHOUT ANY WARRANTY; without even the implied warranty of                    //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                      //
+// GNU General Public License V3 for more details.                                   //
+//                                                                                   //
+// You should have received a copy of the GNU General Public License                 //
+// along with this program. If not, see <http://www.gnu.org/licenses/>.              //
+///////////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
 #include "dsp/agc.h"
@@ -53,9 +63,6 @@ MagAGC::MagAGC(int historySize, double R, double threshold) :
     m_stepDownCounter(0),
 	m_gateCounter(0),
 	m_stepDownDelay(historySize),
-	m_clamping(false),
-	m_R2(R*R),
-	m_clampMax(1.0),
     m_hardLimiting(false)
 {}
 
@@ -64,20 +71,18 @@ MagAGC::~MagAGC()
 
 void MagAGC::resize(int historySize, int stepLength, Real R)
 {
-    m_R2 = R*R;
     m_stepLength = stepLength;
     m_stepDelta = 1.0 / m_stepLength;
     m_stepUpCounter = 0;
     m_stepDownCounter = 0;
     AGC::resize(historySize, R);
-    m_moving_average.fill(0);
+    m_moving_average.fill(m_squared ? R : R*R);
 }
 
 void MagAGC::setOrder(double R)
 {
-    m_R2 = R*R;
     AGC::setOrder(R);
-    m_moving_average.fill(0);
+    m_moving_average.fill(m_squared ? R : R*R);
 }
 
 void MagAGC::setThresholdEnable(bool enable)
@@ -109,30 +114,7 @@ double MagAGC::feedAndGetValue(const Complex& ci)
 {
     m_magsq = ci.real()*ci.real() + ci.imag()*ci.imag();
     m_moving_average.feed(m_magsq);
-
-    if (m_clamping)
-    {
-        if (m_squared)
-        {
-            if (m_magsq > m_clampMax) {
-                m_u0 = m_clampMax / m_magsq;
-            } else {
-                m_u0 = m_R / m_moving_average.average();
-            }
-        }
-        else
-        {
-            if (sqrt(m_magsq) > m_clampMax) {
-                m_u0 = m_clampMax / sqrt(m_magsq);
-            } else {
-                m_u0 = m_R / sqrt(m_moving_average.average());
-            }
-        }
-    }
-    else
-    {
-        m_u0 = m_R / (m_squared ? m_moving_average.average() : sqrt(m_moving_average.average()));
-    }
+    m_u0 = m_R / (m_squared ? m_moving_average.average() : sqrt(m_moving_average.average()));
 
     if (m_thresholdEnable)
     {

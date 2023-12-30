@@ -1,5 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020, 2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2022 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -46,6 +50,7 @@ public:
 	QByteArray serialize() const;
 	bool deserialize(const QByteArray& data);
 	virtual MessageQueue *getInputMessageQueue() { return &m_inputMessageQueue; }
+    void setReplayTime(float time) override;
 
 private:
 	Ui::RTLSDRGui* ui;
@@ -66,6 +71,9 @@ private:
     void displaySampleRate();
     void displayFcTooltip();
 	void displaySettings();
+	void displayReplayLength();
+	void displayReplayOffset();
+	void displayReplayStep();
 	void sendSettings();
 	void updateSampleRateAndFrequency();
 	void updateFrequencyLimits();
@@ -92,6 +100,12 @@ private slots:
     void on_transverter_clicked();
     void on_sampleRateMode_toggled(bool checked);
     void on_biasT_stateChanged(int state);
+	void on_replayOffset_valueChanged(int value);
+	void on_replayNow_clicked();
+	void on_replayPlus_clicked();
+	void on_replayMinus_clicked();
+	void on_replaySave_clicked();
+	void on_replayLoop_toggled(bool checked);
     void openDeviceSettingsDialog(const QPoint& p);
 	void updateHardware();
 	void updateStatus();

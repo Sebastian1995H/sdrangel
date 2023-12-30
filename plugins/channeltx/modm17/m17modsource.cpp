@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2022 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2019-2022 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
+// Copyright (C) 2023 Jon Beniston, M7RCE <jon@beniston.com>                     //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -177,7 +179,7 @@ void M17ModSource::modulateSample()
         calculateLevel(t);
         t1 = m_lowpass.filter(t) * 1.5f;
 
-        m_modPhasor += (m_settings.m_fmDeviation / (float) m_audioSampleRate) * t1;
+        m_modPhasor += ((2.0f * M_PI * m_settings.m_fmDeviation) / (float) m_audioSampleRate) * t1;
 
         // limit phasor range to ]-pi,pi]
         if (m_modPhasor > M_PI) {

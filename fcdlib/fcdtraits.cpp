@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2015-2018 Edouard Griffiths, F4EXB                              //
+// Copyright (C) 2015-2020, 2022-2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com> //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -40,8 +40,8 @@ const char *fcd_traits<ProPlus>::displayedName = "FunCube Dongle Pro+";
 const char *fcd_traits<Pro>::pluginDisplayedName = "FunCube Pro Input";
 const char *fcd_traits<ProPlus>::pluginDisplayedName = "FunCube Pro+ Input";
 
-const char *fcd_traits<Pro>::pluginVersion = "7.15.1";
-const char *fcd_traits<ProPlus>::pluginVersion = "7.15.1";
+const char *fcd_traits<Pro>::pluginVersion = "7.17.1";
+const char *fcd_traits<ProPlus>::pluginVersion = "7.17.1";
 
 const int64_t fcd_traits<Pro>::loLowLimitFreq = 64000000L;
 const int64_t fcd_traits<ProPlus>::loLowLimitFreq = 150000L;

@@ -1,5 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 Edouard Griffiths, F4EXB                                   //
+// Copyright (C) 2012 maintech GmbH, Otto-Hahn-Str. 15, 97204 Hoechberg, Germany //
+// written by Christian Daniel                                                   //
+// Copyright (C) 2014 John Greb <hexameron@spam.no>                              //
+// Copyright (C) 2015-2020 Edouard Griffiths, F4EXB <f4exb06@gmail.com>          //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -34,7 +37,8 @@ class LimeSDRInputThread : public QThread, public DeviceLimeSDRShared::ThreadInt
     Q_OBJECT
 
 public:
-    LimeSDRInputThread(lms_stream_t* stream, SampleSinkFifo* sampleFifo, QObject* parent = 0);
+    LimeSDRInputThread(lms_stream_t* stream, SampleSinkFifo* sampleFifo,
+        ReplayBuffer<qint16> *replayBuffer, QObject* parent = 0);
     ~LimeSDRInputThread();
 
     virtual void startWork();
@@ -53,6 +57,7 @@ private:
     qint16 m_buf[2*DeviceLimeSDR::blockSize]; //must hold I+Q values of each sample hence 2xcomplex size
     SampleVector m_convertBuffer;
     SampleSinkFifo* m_sampleFifo;
+	ReplayBuffer<qint16> *m_replayBuffer;
 
     unsigned int m_log2Decim; // soft decimation
     bool m_iqOrder;

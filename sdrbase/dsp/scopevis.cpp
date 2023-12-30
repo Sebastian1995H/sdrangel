@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2017 F4EXB                                                      //
-// written by Edouard Griffiths                                                  //
+// Copyright (C) 2017-2021, 2023 Edouard Griffiths, F4EXB <f4exb06@gmail.com>    //
+// Copyright (C) 2022 Jiří Pinkava <jiri.pinkava@rossum.ai>                      //
 //                                                                               //
 // This program is free software; you can redistribute it and/or modify          //
 // it under the terms of the GNU General Public License as published by          //
@@ -609,7 +609,7 @@ void ScopeVis::processTrace(const std::vector<ComplexVector::const_iterator>& vc
             }
 
             uint32_t triggerStreamIndex = triggerCondition->m_triggerData.m_streamIndex;
-            const Complex& s = *vbegin[triggerStreamIndex];
+            const Complex& s = vbegin[triggerStreamIndex][processed];
 
             if (m_triggerComparator.triggered(s, *triggerCondition)) // matched the current trigger
             {
